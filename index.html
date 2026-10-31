@@ -135,7 +135,7 @@
 <!-- ===== はじめの がめん ===== -->
 <div id="scr-home" class="screen">
   <div class="head"><h1>ちえの もり</h1></div>
-  <p class="note">もりの もんだいを といて はっぱを あつめよう。いきものが そだつよ。</p>
+  <p class="note">もりの もんだいを といて はっぱを あつめよう。いきものが そだつよ。<span id="home-ver"></span></p>
   <div class="egg-row">
     <canvas id="home-egg" width="120" height="120"></canvas>
     <div class="egg-text">
@@ -210,6 +210,7 @@
     </label>
     <label>おと <select id="grown-snd"><option value="on">あり</option><option value="off">なし</option></select></label>
     <label>もんだいの よみあげ <select id="grown-voice"><option value="on">あり</option><option value="off">なし</option></select></label>
+    <p class="note">おとが 出ないときは、iPad の 音量と 消音（ミュート）を 確かめてください。</p>
     <p><button id="grown-save" class="small">ほぞんして もどる</button></p>
     <table id="grown-table"></table>
   </div><div class="grown-r">
@@ -1262,6 +1263,7 @@
     setText(el('home-creature'), stage >= 2 ? pic.name + ' に なるかな？' : 'なにに なるかな？');
     CM.paintStage(el('home-egg'), stage, pic.id);
     setText(el('home-zukan-count'), 'ずかん ' + S.zukan.length + 'ひき');
+    setText(el('home-ver'), '（v' + CM.APP_VERSION + '）');
     box.innerHTML = '';
     for (i = 0; i < CM.GENRES.length; i++) {
       g = CM.GENRES[i]; st = S.g[g.id];

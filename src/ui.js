@@ -29,6 +29,7 @@
     setText(el('home-creature'), stage >= 2 ? pic.name + ' に なるかな？' : 'なにに なるかな？');
     CM.paintStage(el('home-egg'), stage, pic.id);
     setText(el('home-zukan-count'), 'ずかん ' + S.zukan.length + 'ひき');
+    setText(el('home-ver'), '（v' + CM.APP_VERSION + '）');
     box.innerHTML = '';
     for (i = 0; i < CM.GENRES.length; i++) {
       g = CM.GENRES[i]; st = S.g[g.id];
