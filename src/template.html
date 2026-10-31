@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<!-- manifest＝つうしんが なくても あそべるように、端末へ しまう ファイルの一覧（tools/build_app.py が作る） -->
+<html lang="ja" manifest="offline.appcache">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ちえのもり">
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+<title>ちえの もり</title>
+<!-- format-ok 年長の子が触るアプリ画面（デザインが主目的の成果物＝表示整形の規程は適用外。文字は全てひらがな） -->
+<style>
+  :root{
+    color-scheme: light dark;
+    --ground:#eef6ea; --card:#ffffff; --ink:#1b1b1b; --ink-soft:#55606b; --line:#d6d8dc;
+    --ao:#1f77d0; --daidai:#f0932b; --murasaki:#b45fd1; --mizu:#4fc3f7; --ki:#f6d32d; --midori:#3cb371; --aka:#e64a4a;
+    --ao-bg:#eaf3fa; --daidai-bg:#fdf3e2; --daidai-ink:#8a5a00; --nashi:#9aa5ae; --on-accent:#ffffff; --locked:#f1f1ef;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ground:#14191f; --card:#1c232b; --ink:#e8edf2; --ink-soft:#a7b4c0; --line:#38434e; --ao-bg:#12354a; --daidai-bg:#3d3010; --daidai-ink:#f2b544; --nashi:#5b6672; --locked:#232830;
+      --ao:#1f77d0; --daidai:#f0932b; --murasaki:#b45fd1; --mizu:#4fc3f7; --ki:#f6d32d; --midori:#3cb371; --aka:#e64a4a; --on-accent:#ffffff; }
+  }
+  *{box-sizing:border-box;}
+  html{font-size:24px;}
+  html,body{margin:0; padding:0;}
+  body{ background:var(--ground); color:var(--ink); font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif; font-size:0.92rem; line-height:1.6;
+    -webkit-text-size-adjust:100%; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:rgba(0,0,0,0); }
+  .screen{padding:10px 14px 30px; max-width:900px; margin:0 auto;}
+  h1{font-size:1.25rem; margin:4px 0 2px;}
+  h2{font-size:1rem; margin:8px 0;}
+  p{margin:6px 0;}
+  button{ font-family:inherit; font-size:0.92rem; -webkit-appearance:none; appearance:none; border:0; border-radius:12px; padding:12px 20px; color:var(--on-accent); background:var(--ao); cursor:pointer; min-height:58px; }
+  button.sub{background:var(--nashi);}
+  button.small{font-size:0.67rem; min-height:0; padding:8px 14px;}
+  .head{overflow:hidden; padding-bottom:4px;}
+  .head h1{float:left;}
+  .head .right{float:right; margin-top:6px;}
+  .note{color:var(--ink-soft); font-size:0.67rem;}
+
+  /* はじめの がめん */
+  .egg-row{overflow:hidden; background:var(--card); border:2px solid var(--line); border-radius:16px; padding:12px; margin:10px 0;}
+  .egg-row canvas{float:left; width:120px; height:120px; margin-right:14px;}
+  .egg-row .egg-text{overflow:hidden;}
+  .egg-row .egg-text p{margin:2px 0;}
+  .glist{overflow:hidden;}
+  .gbtn{float:left; width:48%; margin:1%; padding:8px 12px; text-align:left; min-height:0; font-size:0.83rem; line-height:1.3; background:var(--midori);}
+  .gbtn b{display:block; font-size:0.92rem;}
+  .gbtn span{display:block; font-size:0.54rem; opacity:0.92;}
+  .gbtn .rec{opacity:0.8;}
+  .g-ten{background:#2e8b57;} .g-kagami{background:#1f77d0;} .g-kazoe{background:#d9822b;} .g-shiso{background:#8e5bd1;}
+  .g-tonneru{background:#2a9d8f;} .g-onaji{background:#c2567a;} .g-kasane{background:#5a7bd0;} .g-mix{background:#e64a4a;}
+  .home-foot{overflow:hidden; margin-top:14px;}
+  .home-foot button{float:left; margin-right:10px;}
+  .home-foot #grown-btn{float:right;}
+
+  /* あそぶ */
+  .qbar{overflow:hidden; font-size:0.75rem; color:var(--ink-soft);}
+  .qbar #play-back{float:left; margin-right:10px;}
+  .qbar #say-btn{float:right;}
+  .qbar span{display:inline-block; margin:10px 10px 0 0;}
+  .qbox{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:10px; margin:8px 0; text-align:center;}
+  .qtext{font-size:0.92rem; font-weight:bold; margin:2px 0 6px; word-break:keep-all; line-height:1.4;}
+  .qstem canvas{display:block; margin:0 auto; max-width:100%;}
+  .choices{display:-webkit-flex; display:flex; -webkit-flex-wrap:wrap; flex-wrap:wrap; -webkit-justify-content:center; justify-content:center; margin-top:6px;}
+  .choice{width:46%; max-width:190px; margin:1.5%; background:var(--card); border:4px solid var(--line); border-radius:16px; padding:6px; text-align:center; cursor:pointer;}
+  .choice canvas{display:block; margin:0 auto; max-width:100%;}
+  .choice .mark{font-size:0.75rem; min-height:1.3em; font-weight:bold;}
+  .choice.right{border-color:var(--ao); background:var(--ao-bg);}
+  .choice.right .mark{color:var(--ao);}
+  .choice.wrong{border-color:var(--daidai); background:var(--daidai-bg);}
+  .choice.wrong .mark{color:var(--daidai-ink);}
+  .choice-num .cnum{font-size:2rem; font-weight:bold; padding:14px 0 0; line-height:1.2;}
+  .choice-shape{width:30%; max-width:150px;}
+  .tenbox{text-align:center;}
+  .tenbox canvas{display:block; margin:0 auto; background:#fffdf7; border-radius:8px;}
+  .tenbtns{margin-top:6px;}
+  .tenbtns button{margin:4px 4px; min-height:0; padding:10px 14px; font-size:0.75rem;}
+  #ten-check{background:var(--daidai); font-size:0.92rem; padding:10px 26px;}
+  .msg{text-align:center; font-size:0.83rem; min-height:1.6em; margin:6px 0; line-height:1.4;}
+  .msg.good{color:var(--ao); font-weight:bold;}
+  .msg.warn{color:var(--daidai-ink); font-weight:bold;}
+  .playfoot{text-align:center;}
+  #next-btn{font-size:1.08rem; padding:12px 40px;}
+
+  /* けっか */
+  .res{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:16px; text-align:center;}
+  .res canvas{width:150px; height:150px;}
+  .stars{font-size:1.42rem; letter-spacing:4px; color:var(--daidai);}
+  .res button{margin:8px 6px;}
+
+  /* ずかん */
+  .zlist{overflow:hidden;}
+  .zcard{float:left; width:22%; margin:1.5%; background:var(--card); border:2px solid var(--line); border-radius:14px; padding:8px; text-align:center; font-size:0.67rem;}
+  .zcard canvas{width:100%; height:auto;}
+  .zcard.none{color:var(--nashi); background:var(--locked);}
+  .zcard.none canvas{opacity:0.25;}
+
+  /* おとなのひと */
+  .grown{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:10px 14px; font-size:0.58rem; line-height:1.4;}
+  .grown table{border-collapse:collapse; width:100%; margin:6px 0;}
+  .grown th,.grown td{border:1px solid var(--line); padding:2px 6px; text-align:left;}
+  .grown input,.grown select{font-size:0.67rem; padding:4px; border:1px solid var(--line); border-radius:8px; width:100%; color:var(--ink); background:var(--card);}
+  .grown label{display:block; margin-top:4px;}
+  .grown h3{margin:4px 0; font-size:0.67rem;}
+  .grown ul{margin:4px 0; padding-left:1.2em;}
+  .grown p{margin:4px 0;}
+  #reset-2{background:var(--murasaki);}
+
+  /* iPad よこおき＝1がめんに おさめる（たて 640px 以内）。ひだり＝もんだい／みぎ＝えらぶ */
+  @media (min-width:900px) and (orientation:landscape){
+    .screen{max-width:1024px; padding:6px 14px 6px; overflow:hidden;}
+    #scr-play .qbox{float:left; width:50%; margin:4px 0 0; padding:8px;}
+    #scr-play .choices{float:right; width:48%; margin-top:0;}
+    #scr-play .tenbox{float:right; width:48%; margin-top:4px;}
+    #scr-play .msg{float:left; clear:left; width:50%; margin:6px 0 2px;}
+    #scr-play .playfoot{float:left; clear:left; width:50%;}
+    .choice{margin:1% 1.5%; max-width:200px;}
+    .choice-shape{max-width:150px;}
+    #scr-home .head,#scr-home > .note,#scr-home .egg-row,#scr-home .home-foot{float:left; clear:left; width:40%;}
+    #scr-home .glist{float:right; width:58%;}
+    .zcard{width:22%;}
+    .grown-l{float:left; width:48%;}
+    .grown-r{float:right; width:48%;}
+  }
+  @media (max-width:600px){
+    .gbtn{width:98%;}
+    .zcard{width:47%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== はじめの がめん ===== -->
+<div id="scr-home" class="screen">
+  <div class="head"><h1>ちえの もり</h1></div>
+  <p class="note">もりの もんだいを といて はっぱを あつめよう。いきものが そだつよ。</p>
+  <div class="egg-row">
+    <canvas id="home-egg" width="120" height="120"></canvas>
+    <div class="egg-text">
+      <p id="home-rank"></p>
+      <p id="home-leaves" class="note"></p>
+      <p id="home-stage"></p>
+      <p id="home-creature" class="note"></p>
+    </div>
+  </div>
+  <div id="genre-list" class="glist"></div>
+  <div class="home-foot">
+    <button id="zukan-btn" class="sub"><span id="home-zukan-count">ずかん</span></button>
+    <button id="grown-btn" class="sub small">おとなのひと（ながおし）</button>
+  </div>
+</div>
+
+<!-- ===== あそぶ ===== -->
+<div id="scr-play" class="screen" style="display:none">
+  <div class="qbar">
+    <button id="play-back" class="sub small">やめる</button>
+    <span id="play-genre"></span><span id="play-no"></span>
+    <button id="say-btn" class="sub small">よむ</button>
+  </div>
+  <div class="qbox">
+    <div id="q-text" class="qtext"></div>
+    <div id="q-stem-wrap" class="qstem"><canvas id="q-stem" width="270" height="270"></canvas></div>
+  </div>
+  <div id="choices" class="choices"></div>
+  <div id="ten-box" class="tenbox" style="display:none">
+    <canvas id="ten-canvas" width="300" height="300"></canvas>
+    <div class="tenbtns">
+      <button id="ten-lift" class="sub">ペンを はなす</button>
+      <button id="ten-undo" class="sub">ひとつ もどす</button>
+      <button id="ten-clear" class="sub">ぜんぶ けす</button>
+      <button id="ten-check">できた！</button>
+    </div>
+  </div>
+  <div id="msg" class="msg"></div>
+  <div class="playfoot"><button id="next-btn" style="display:none">つぎへ</button></div>
+</div>
+
+<!-- ===== けっか ===== -->
+<div id="scr-result" class="screen" style="display:none">
+  <div class="res">
+    <h2 id="res-title"></h2>
+    <div id="res-stars" class="stars"></div>
+    <p id="res-score"></p>
+    <p id="res-leaves"></p>
+    <canvas id="res-egg" width="150" height="150"></canvas>
+    <p id="res-events"></p>
+    <div>
+      <button id="res-again">もういちど</button>
+      <button id="res-home" class="sub">べつの もんだいへ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ずかん ===== -->
+<div id="scr-zukan" class="screen" style="display:none">
+  <div class="head"><h1>ずかん</h1><button id="zukan-back" class="sub small right">もどる</button></div>
+  <p class="note">はっぱを 24まい あつめると、1ぴき うまれるよ。</p>
+  <div id="zukan-list" class="zlist"></div>
+</div>
+
+<!-- ===== おとなのひと ===== -->
+<div id="scr-grown" class="screen" style="display:none">
+  <div class="head"><h1>おとなのひと</h1><button id="grown-back" class="sub small right">もどる</button></div>
+  <div class="grown"><div class="grown-l">
+    <label>なまえ（ひらがな・8もじまで）<input id="grown-name" type="text" maxlength="8"></label>
+    <label>1まわりの もんだいの かず
+      <select id="grown-per"><option value="5">5もん</option><option value="10">10もん</option></select>
+    </label>
+    <label>おと <select id="grown-snd"><option value="on">あり</option><option value="off">なし</option></select></label>
+    <label>もんだいの よみあげ <select id="grown-voice"><option value="on">あり</option><option value="off">なし</option></select></label>
+    <p><button id="grown-save" class="small">ほぞんして もどる</button></p>
+    <table id="grown-table"></table>
+  </div><div class="grown-r">
+    <h3>しくみ</h3>
+    <ul>
+      <li>レベルは 自動で上下＝5問中4問を1回で正解すると上へ、2問以下なら下へ</li>
+      <li>はっぱ＝1回で正解2枚・2回目で正解1枚・3問連続で＋1</li>
+      <li>てんせん＝点を順にタップして線を引く。「できた！」で判定。1回目の間違いは お手本が うすく出る</li>
+      <li>もんだいの形＝過去問（2022〜2025年度）のペーパーの型を その場で作る＝同じ問題は出ない</li>
+    </ul>
+    <p><button id="reset-1" class="sub small">きろくを ぜんぶ けす</button> <button id="reset-2" class="small" style="display:none">ほんとうに けす</button></p>
+    <p id="grown-ver" class="note"></p>
+  </div></div>
+</div>
+
+<script>
+<!--APP_JS-->
+</script>
+<script>
+<!--UI_JS-->
+</script>
+</body>
+</html>

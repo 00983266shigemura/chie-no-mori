@@ -1,0 +1,3 @@
+ちえの もり v1: 過去問7型（てんせん・かがみ・かぞえる・シーソー・トンネル・おなじ かたち・かさねる）＋まぜまぜ・自動レベル・よみあげ・ごほうび
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>

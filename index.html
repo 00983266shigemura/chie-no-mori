@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<!-- manifest＝つうしんが なくても あそべるように、端末へ しまう ファイルの一覧（tools/build_app.py が作る） -->
+<html lang="ja" manifest="offline.appcache">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ちえのもり">
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+<title>ちえの もり</title>
+<!-- format-ok 年長の子が触るアプリ画面（デザインが主目的の成果物＝表示整形の規程は適用外。文字は全てひらがな） -->
+<style>
+  :root{
+    color-scheme: light dark;
+    --ground:#eef6ea; --card:#ffffff; --ink:#1b1b1b; --ink-soft:#55606b; --line:#d6d8dc;
+    --ao:#1f77d0; --daidai:#f0932b; --murasaki:#b45fd1; --mizu:#4fc3f7; --ki:#f6d32d; --midori:#3cb371; --aka:#e64a4a;
+    --ao-bg:#eaf3fa; --daidai-bg:#fdf3e2; --daidai-ink:#8a5a00; --nashi:#9aa5ae; --on-accent:#ffffff; --locked:#f1f1ef;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ground:#14191f; --card:#1c232b; --ink:#e8edf2; --ink-soft:#a7b4c0; --line:#38434e; --ao-bg:#12354a; --daidai-bg:#3d3010; --daidai-ink:#f2b544; --nashi:#5b6672; --locked:#232830;
+      --ao:#1f77d0; --daidai:#f0932b; --murasaki:#b45fd1; --mizu:#4fc3f7; --ki:#f6d32d; --midori:#3cb371; --aka:#e64a4a; --on-accent:#ffffff; }
+  }
+  *{box-sizing:border-box;}
+  html{font-size:24px;}
+  html,body{margin:0; padding:0;}
+  body{ background:var(--ground); color:var(--ink); font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif; font-size:0.92rem; line-height:1.6;
+    -webkit-text-size-adjust:100%; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:rgba(0,0,0,0); }
+  .screen{padding:10px 14px 30px; max-width:900px; margin:0 auto;}
+  h1{font-size:1.25rem; margin:4px 0 2px;}
+  h2{font-size:1rem; margin:8px 0;}
+  p{margin:6px 0;}
+  button{ font-family:inherit; font-size:0.92rem; -webkit-appearance:none; appearance:none; border:0; border-radius:12px; padding:12px 20px; color:var(--on-accent); background:var(--ao); cursor:pointer; min-height:58px; }
+  button.sub{background:var(--nashi);}
+  button.small{font-size:0.67rem; min-height:0; padding:8px 14px;}
+  .head{overflow:hidden; padding-bottom:4px;}
+  .head h1{float:left;}
+  .head .right{float:right; margin-top:6px;}
+  .note{color:var(--ink-soft); font-size:0.67rem;}
+
+  /* はじめの がめん */
+  .egg-row{overflow:hidden; background:var(--card); border:2px solid var(--line); border-radius:16px; padding:12px; margin:10px 0;}
+  .egg-row canvas{float:left; width:120px; height:120px; margin-right:14px;}
+  .egg-row .egg-text{overflow:hidden;}
+  .egg-row .egg-text p{margin:2px 0;}
+  .glist{overflow:hidden;}
+  .gbtn{float:left; width:48%; margin:1%; padding:8px 12px; text-align:left; min-height:0; font-size:0.83rem; line-height:1.3; background:var(--midori);}
+  .gbtn b{display:block; font-size:0.92rem;}
+  .gbtn span{display:block; font-size:0.54rem; opacity:0.92;}
+  .gbtn .rec{opacity:0.8;}
+  .g-ten{background:#2e8b57;} .g-kagami{background:#1f77d0;} .g-kazoe{background:#d9822b;} .g-shiso{background:#8e5bd1;}
+  .g-tonneru{background:#2a9d8f;} .g-onaji{background:#c2567a;} .g-kasane{background:#5a7bd0;} .g-mix{background:#e64a4a;}
+  .home-foot{overflow:hidden; margin-top:14px;}
+  .home-foot button{float:left; margin-right:10px;}
+  .home-foot #grown-btn{float:right;}
+
+  /* あそぶ */
+  .qbar{overflow:hidden; font-size:0.75rem; color:var(--ink-soft);}
+  .qbar #play-back{float:left; margin-right:10px;}
+  .qbar #say-btn{float:right;}
+  .qbar span{display:inline-block; margin:10px 10px 0 0;}
+  .qbox{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:10px; margin:8px 0; text-align:center;}
+  .qtext{font-size:0.92rem; font-weight:bold; margin:2px 0 6px; word-break:keep-all; line-height:1.4;}
+  .qstem canvas{display:block; margin:0 auto; max-width:100%;}
+  .choices{display:-webkit-flex; display:flex; -webkit-flex-wrap:wrap; flex-wrap:wrap; -webkit-justify-content:center; justify-content:center; margin-top:6px;}
+  .choice{width:46%; max-width:190px; margin:1.5%; background:var(--card); border:4px solid var(--line); border-radius:16px; padding:6px; text-align:center; cursor:pointer;}
+  .choice canvas{display:block; margin:0 auto; max-width:100%;}
+  .choice .mark{font-size:0.75rem; min-height:1.3em; font-weight:bold;}
+  .choice.right{border-color:var(--ao); background:var(--ao-bg);}
+  .choice.right .mark{color:var(--ao);}
+  .choice.wrong{border-color:var(--daidai); background:var(--daidai-bg);}
+  .choice.wrong .mark{color:var(--daidai-ink);}
+  .choice-num .cnum{font-size:2rem; font-weight:bold; padding:14px 0 0; line-height:1.2;}
+  .choice-shape{width:30%; max-width:150px;}
+  .tenbox{text-align:center;}
+  .tenbox canvas{display:block; margin:0 auto; background:#fffdf7; border-radius:8px;}
+  .tenbtns{margin-top:6px;}
+  .tenbtns button{margin:4px 4px; min-height:0; padding:10px 14px; font-size:0.75rem;}
+  #ten-check{background:var(--daidai); font-size:0.92rem; padding:10px 26px;}
+  .msg{text-align:center; font-size:0.83rem; min-height:1.6em; margin:6px 0; line-height:1.4;}
+  .msg.good{color:var(--ao); font-weight:bold;}
+  .msg.warn{color:var(--daidai-ink); font-weight:bold;}
+  .playfoot{text-align:center;}
+  #next-btn{font-size:1.08rem; padding:12px 40px;}
+
+  /* けっか */
+  .res{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:16px; text-align:center;}
+  .res canvas{width:150px; height:150px;}
+  .stars{font-size:1.42rem; letter-spacing:4px; color:var(--daidai);}
+  .res button{margin:8px 6px;}
+
+  /* ずかん */
+  .zlist{overflow:hidden;}
+  .zcard{float:left; width:22%; margin:1.5%; background:var(--card); border:2px solid var(--line); border-radius:14px; padding:8px; text-align:center; font-size:0.67rem;}
+  .zcard canvas{width:100%; height:auto;}
+  .zcard.none{color:var(--nashi); background:var(--locked);}
+  .zcard.none canvas{opacity:0.25;}
+
+  /* おとなのひと */
+  .grown{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:10px 14px; font-size:0.58rem; line-height:1.4;}
+  .grown table{border-collapse:collapse; width:100%; margin:6px 0;}
+  .grown th,.grown td{border:1px solid var(--line); padding:2px 6px; text-align:left;}
+  .grown input,.grown select{font-size:0.67rem; padding:4px; border:1px solid var(--line); border-radius:8px; width:100%; color:var(--ink); background:var(--card);}
+  .grown label{display:block; margin-top:4px;}
+  .grown h3{margin:4px 0; font-size:0.67rem;}
+  .grown ul{margin:4px 0; padding-left:1.2em;}
+  .grown p{margin:4px 0;}
+  #reset-2{background:var(--murasaki);}
+
+  /* iPad よこおき＝1がめんに おさめる（たて 640px 以内）。ひだり＝もんだい／みぎ＝えらぶ */
+  @media (min-width:900px) and (orientation:landscape){
+    .screen{max-width:1024px; padding:6px 14px 6px; overflow:hidden;}
+    #scr-play .qbox{float:left; width:50%; margin:4px 0 0; padding:8px;}
+    #scr-play .choices{float:right; width:48%; margin-top:0;}
+    #scr-play .tenbox{float:right; width:48%; margin-top:4px;}
+    #scr-play .msg{float:left; clear:left; width:50%; margin:6px 0 2px;}
+    #scr-play .playfoot{float:left; clear:left; width:50%;}
+    .choice{margin:1% 1.5%; max-width:200px;}
+    .choice-shape{max-width:150px;}
+    #scr-home .head,#scr-home > .note,#scr-home .egg-row,#scr-home .home-foot{float:left; clear:left; width:40%;}
+    #scr-home .glist{float:right; width:58%;}
+    .zcard{width:22%;}
+    .grown-l{float:left; width:48%;}
+    .grown-r{float:right; width:48%;}
+  }
+  @media (max-width:600px){
+    .gbtn{width:98%;}
+    .zcard{width:47%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== はじめの がめん ===== -->
+<div id="scr-home" class="screen">
+  <div class="head"><h1>ちえの もり</h1></div>
+  <p class="note">もりの もんだいを といて はっぱを あつめよう。いきものが そだつよ。</p>
+  <div class="egg-row">
+    <canvas id="home-egg" width="120" height="120"></canvas>
+    <div class="egg-text">
+      <p id="home-rank"></p>
+      <p id="home-leaves" class="note"></p>
+      <p id="home-stage"></p>
+      <p id="home-creature" class="note"></p>
+    </div>
+  </div>
+  <div id="genre-list" class="glist"></div>
+  <div class="home-foot">
+    <button id="zukan-btn" class="sub"><span id="home-zukan-count">ずかん</span></button>
+    <button id="grown-btn" class="sub small">おとなのひと（ながおし）</button>
+  </div>
+</div>
+
+<!-- ===== あそぶ ===== -->
+<div id="scr-play" class="screen" style="display:none">
+  <div class="qbar">
+    <button id="play-back" class="sub small">やめる</button>
+    <span id="play-genre"></span><span id="play-no"></span>
+    <button id="say-btn" class="sub small">よむ</button>
+  </div>
+  <div class="qbox">
+    <div id="q-text" class="qtext"></div>
+    <div id="q-stem-wrap" class="qstem"><canvas id="q-stem" width="270" height="270"></canvas></div>
+  </div>
+  <div id="choices" class="choices"></div>
+  <div id="ten-box" class="tenbox" style="display:none">
+    <canvas id="ten-canvas" width="300" height="300"></canvas>
+    <div class="tenbtns">
+      <button id="ten-lift" class="sub">ペンを はなす</button>
+      <button id="ten-undo" class="sub">ひとつ もどす</button>
+      <button id="ten-clear" class="sub">ぜんぶ けす</button>
+      <button id="ten-check">できた！</button>
+    </div>
+  </div>
+  <div id="msg" class="msg"></div>
+  <div class="playfoot"><button id="next-btn" style="display:none">つぎへ</button></div>
+</div>
+
+<!-- ===== けっか ===== -->
+<div id="scr-result" class="screen" style="display:none">
+  <div class="res">
+    <h2 id="res-title"></h2>
+    <div id="res-stars" class="stars"></div>
+    <p id="res-score"></p>
+    <p id="res-leaves"></p>
+    <canvas id="res-egg" width="150" height="150"></canvas>
+    <p id="res-events"></p>
+    <div>
+      <button id="res-again">もういちど</button>
+      <button id="res-home" class="sub">べつの もんだいへ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ずかん ===== -->
+<div id="scr-zukan" class="screen" style="display:none">
+  <div class="head"><h1>ずかん</h1><button id="zukan-back" class="sub small right">もどる</button></div>
+  <p class="note">はっぱを 24まい あつめると、1ぴき うまれるよ。</p>
+  <div id="zukan-list" class="zlist"></div>
+</div>
+
+<!-- ===== おとなのひと ===== -->
+<div id="scr-grown" class="screen" style="display:none">
+  <div class="head"><h1>おとなのひと</h1><button id="grown-back" class="sub small right">もどる</button></div>
+  <div class="grown"><div class="grown-l">
+    <label>なまえ（ひらがな・8もじまで）<input id="grown-name" type="text" maxlength="8"></label>
+    <label>1まわりの もんだいの かず
+      <select id="grown-per"><option value="5">5もん</option><option value="10">10もん</option></select>
+    </label>
+    <label>おと <select id="grown-snd"><option value="on">あり</option><option value="off">なし</option></select></label>
+    <label>もんだいの よみあげ <select id="grown-voice"><option value="on">あり</option><option value="off">なし</option></select></label>
+    <p><button id="grown-save" class="small">ほぞんして もどる</button></p>
+    <table id="grown-table"></table>
+  </div><div class="grown-r">
+    <h3>しくみ</h3>
+    <ul>
+      <li>レベルは 自動で上下＝5問中4問を1回で正解すると上へ、2問以下なら下へ</li>
+      <li>はっぱ＝1回で正解2枚・2回目で正解1枚・3問連続で＋1</li>
+      <li>てんせん＝点を順にタップして線を引く。「できた！」で判定。1回目の間違いは お手本が うすく出る</li>
+      <li>もんだいの形＝過去問（2022〜2025年度）のペーパーの型を その場で作る＝同じ問題は出ない</li>
+    </ul>
+    <p><button id="reset-1" class="sub small">きろくを ぜんぶ けす</button> <button id="reset-2" class="small" style="display:none">ほんとうに けす</button></p>
+    <p id="grown-ver" class="note"></p>
+  </div></div>
+</div>
+
+<script>
+/* ちえの もり ―― 小学校受験の ペーパーの もんだいを あそびで（2012年の iPad・iOS 10.3.3 で動く書き方）
+   きまり＝
+   ・古い Safari で動く書き方だけ（var と function。let/const/アロー/テンプレート文字列は使わない）
+   ・絵文字は使わない（この端末の字の在庫は 2016年で止まっている）
+   ・端末内保存（localStorage）は try-catch で包み、やり直しの手段を画面に置く
+   ・問題は全部 その場で作る＝同じ問題は二度と出ない。正解は 機械で確かめてから出す（selfTest）
+   もんだいの型（過去問 2022〜2025年度の ペーパーから）＝
+     ten     てんせん（点図形の模写）  … 問題4・18・25・35
+     kagami  かがみ・みずうみ（鏡図形・水面）… 問題4・17
+     kazoe   かぞえる（選んで数える）  … 問題2・19・40
+     shiso   シーソー（重さくらべ）     … 問題3・28
+     tonneru トンネル（ブラックボックス）… 問題28・41
+     onaji   おなじ かたち（同図形・回転同図形）… 問題36
+     kasane  かさねる（重ね図形）       … 問題27
+   このファイルは tools/build_app.py が index.html へ埋め込む。直すのは src/ だけ。 */
+(function (global) {
+  'use strict';
+
+  var CM = {};
+  /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
+  CM.APP_VERSION = 1;
+  CM.SCHEMA = 1;
+  CM.STORE_KEY = 'chie_no_mori_v1';
+
+  /* ================= いろ ================= */
+  var COL = {
+    ao: '#1f77d0', daidai: '#f0932b', murasaki: '#b45fd1', mizu: '#4fc3f7', ki: '#f6d32d',
+    midori: '#3cb371', aka: '#e64a4a', sumi: '#1b1b1b', shiro: '#ffffff', usui: '#9aa3ab', kami: '#fffdf7',
+    hai: '#c9cfd4'
+  };
+  CM.COL = COL;
+
+  /* ================= らんすう（試験では たねを 固定できる） ================= */
+  var rngState = null;
+  function rnd() {
+    if (rngState === null) { return Math.random(); }
+    rngState = (rngState + 0x6D2B79F5) | 0;
+    var t = rngState;
+    t = Math.imul ? Math.imul(t ^ (t >>> 15), t | 1) : (((t ^ (t >>> 15)) * (t | 1)) | 0);
+    t ^= t + (Math.imul ? Math.imul(t ^ (t >>> 7), t | 61) : (((t ^ (t >>> 7)) * (t | 61)) | 0));
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  CM.seed = function (s) { rngState = (s === null || s === undefined) ? null : (s | 0); };
+  function ri(n) { return Math.floor(rnd() * n); }
+  function pick(arr) { return arr[ri(arr.length)]; }
+  function shuffle(arr) {
+    var a = arr.slice(), i, j, t;
+    for (i = a.length - 1; i > 0; i--) { j = ri(i + 1); t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  CM.shuffle = shuffle;
+  function uniqNums(answer, count, lo, hi) {
+    /* answer を含む count 個の ちがう数（lo〜hi）。近い数を まぜて まぎらわしく */
+    var out = [answer], tries = 0, v;
+    while (out.length < count && tries < 200) {
+      tries++;
+      v = answer + (ri(7) - 3);
+      if (v < lo || v > hi || out.indexOf(v) >= 0) { continue; }
+      out.push(v);
+    }
+    while (out.length < count) { v = lo + ri(hi - lo + 1); if (out.indexOf(v) < 0) { out.push(v); } }
+    return shuffle(out);
+  }
+
+  /* ================= 絵の 部品 ================= */
+  function circle(ctx, x, y, r, fill, stroke, lw) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  }
+  function ellipse(ctx, x, y, rx, ry, fill, stroke, lw) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(rx, ry);
+    ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.restore();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  }
+  function poly(ctx, pts, fill, stroke, lw) {
+    var i;
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (i = 1; i < pts.length; i++) { ctx.lineTo(pts[i][0], pts[i][1]); }
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  }
+  function line(ctx, x1, y1, x2, y2, color, lw) {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+  /* かたち（○●△□×☆）を (0,0) まん中・半径 r で */
+  var SHAPE_NAMES = { maru: 'しろまる', kuro: 'くろまる', sankaku: 'さんかく', shikaku: 'しかく', batsu: 'ばつ', hoshi: 'ほし' };
+  CM.SHAPE_NAMES = SHAPE_NAMES;
+  function drawShape(ctx, name, r, colorFill) {
+    var i, p = [], a;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (name === 'maru') { circle(ctx, 0, 0, r, COL.shiro, COL.sumi, Math.max(2, r * 0.18)); }
+    else if (name === 'kuro') { circle(ctx, 0, 0, r, colorFill || COL.sumi, COL.sumi, 2); }
+    else if (name === 'sankaku') { poly(ctx, [[0, -r * 1.1], [r * 1.05, r * 0.8], [-r * 1.05, r * 0.8]], colorFill || COL.daidai, COL.sumi, Math.max(2, r * 0.14)); }
+    else if (name === 'shikaku') { ctx.beginPath(); ctx.rect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8); ctx.fillStyle = colorFill || COL.mizu; ctx.fill(); ctx.strokeStyle = COL.sumi; ctx.lineWidth = Math.max(2, r * 0.14); ctx.stroke(); }
+    else if (name === 'batsu') { ctx.strokeStyle = colorFill || COL.sumi; ctx.lineWidth = Math.max(2.5, r * 0.22); ctx.beginPath(); ctx.moveTo(-r, -r); ctx.lineTo(r, r); ctx.moveTo(r, -r); ctx.lineTo(-r, r); ctx.stroke(); }
+    else if (name === 'hoshi') {
+      for (i = 0; i < 10; i++) { a = -Math.PI / 2 + i * Math.PI / 5; p.push([Math.cos(a) * (i % 2 ? r * 0.48 : r * 1.15), Math.sin(a) * (i % 2 ? r * 0.48 : r * 1.15)]); }
+      poly(ctx, p, colorFill || COL.ki, COL.sumi, Math.max(2, r * 0.12));
+    }
+  }
+  CM.drawShape = drawShape;
+
+  /* ================= 点と線（てんせん・かがみ・かさねる で共通） =================
+     N×N の点。点は (x,y) 0..N-1。線分は 単位（となり・ななめ1つ）に分けて持つ。
+     sig＝線分の集合の文字列（順番に よらない） */
+  function segKey(a, b) {
+    var k1 = a[0] + ',' + a[1], k2 = b[0] + ',' + b[1];
+    return (k1 < k2) ? k1 + '-' + k2 : k2 + '-' + k1;
+  }
+  CM.segKey = segKey;
+  /* a→b が たて・よこ・ななめ45度なら 単位線分の並びを返す。ちがえば null */
+  function unitSegs(a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], n, sx, sy, i, out = [], x = a[0], y = a[1];
+    if (dx === 0 && dy === 0) { return []; }
+    if (!(dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy))) { return null; }
+    n = Math.max(Math.abs(dx), Math.abs(dy)); sx = dx / n; sy = dy / n;
+    for (i = 0; i < n; i++) { out.push([[x, y], [x + sx, y + sy]]); x += sx; y += sy; }
+    return out;
+  }
+  CM.unitSegs = unitSegs;
+  function segSetSig(set) { var ks = [], k; for (k in set) { if (set.hasOwnProperty(k)) { ks.push(k); } } ks.sort(); return ks.join('|'); }
+  function segsToSet(segs) { var s = {}, i; for (i = 0; i < segs.length; i++) { s[segKey(segs[i][0], segs[i][1])] = segs[i]; } return s; }
+  function setToSegs(set) { var out = [], k; for (k in set) { if (set.hasOwnProperty(k)) { out.push(set[k]); } } return out; }
+  function segCount(set) { var n = 0, k; for (k in set) { if (set.hasOwnProperty(k)) { n++; } } return n; }
+  CM.segSetSig = segSetSig; CM.segsToSet = segsToSet; CM.setToSegs = setToSegs;
+  /* 点の変換 */
+  function flipX(p, n) { return [n - 1 - p[0], p[1]]; }
+  function flipY(p, n) { return [p[0], n - 1 - p[1]]; }
+  function rot180(p, n) { return [n - 1 - p[0], n - 1 - p[1]]; }
+  function rot90(p, n) { return [n - 1 - p[1], p[0]]; }
+  function mapSegs(segs, fn, n) { var out = [], i; for (i = 0; i < segs.length; i++) { out.push([fn(segs[i][0], n), fn(segs[i][1], n)]); } return out; }
+  CM.mapSegs = mapSegs; CM.flipX = flipX; CM.flipY = flipY; CM.rot180 = rot180; CM.rot90 = rot90;
+
+  /* つながった 線を 1本 作る（ランダムウォーク）。n×n・count 本の 単位線分・diag＝ななめを使う・maxLen＝1歩の長さ */
+  var DIRS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  function makePath(n, count, diag, maxLen) {
+    var tries, set, p, d, len, segs, k, q, i, got, cur, prev, dirs;
+    for (tries = 0; tries < 300; tries++) {
+      set = {}; got = 0; cur = [ri(n), ri(n)]; prev = null;
+      dirs = diag ? DIRS8 : DIRS8.slice(0, 4);
+      for (k = 0; k < count * 6 && got < count; k++) {
+        d = pick(dirs); len = 1 + ri(maxLen);
+        if (prev && d[0] === -prev[0] && d[1] === -prev[1]) { continue; }   /* すぐ もどらない */
+        q = [cur[0] + d[0] * len, cur[1] + d[1] * len];
+        if (q[0] < 0 || q[1] < 0 || q[0] >= n || q[1] >= n) { continue; }
+        segs = unitSegs(cur, q);
+        for (i = 0; i < segs.length; i++) { if (set[segKey(segs[i][0], segs[i][1])]) { break; } }
+        if (i < segs.length) { continue; }
+        if (got + segs.length > count) { continue; }
+        for (i = 0; i < segs.length; i++) { set[segKey(segs[i][0], segs[i][1])] = segs[i]; }
+        got += segs.length; cur = q; prev = d;
+      }
+      if (got === count) { return set; }
+    }
+    /* 保険＝よこ1本 */
+    p = [[0, 0], [1, 0]]; set = {}; set[segKey(p[0], p[1])] = p; return set;
+  }
+  CM.makePath = makePath;
+  /* 1本だけ ちがう かたち（1本 消して 1本 足す）。もとと 同じなら null */
+  function perturb(set, n) {
+    var segs = setToSegs(set), tries, out, idx, a, d, b, k, i;
+    for (tries = 0; tries < 60; tries++) {
+      out = {}; idx = ri(segs.length);
+      for (i = 0; i < segs.length; i++) { if (i !== idx) { out[segKey(segs[i][0], segs[i][1])] = segs[i]; } }
+      a = pick(segs)[ri(2)]; d = pick(DIRS8); b = [a[0] + d[0], a[1] + d[1]];
+      if (b[0] < 0 || b[1] < 0 || b[0] >= n || b[1] >= n) { continue; }
+      k = segKey(a, b);
+      if (set[k] || out[k]) { continue; }
+      out[k] = [a, b];
+      if (segSetSig(out) !== segSetSig(set)) { return out; }
+    }
+    return null;
+  }
+  CM.perturb = perturb;
+
+  /* 点と線を 描く。ctx の (0,0)＝左上。size＝1辺。opts.color・opts.ghost（うすく）・opts.dots（点を出す） */
+  function drawDots(ctx, n, size, set, opts) {
+    var pad = size * 0.12, step = (size - pad * 2) / (n - 1), i, j, segs, s, x1, y1, x2, y2;
+    opts = opts || {};
+    if (opts.dots !== false) {
+      for (i = 0; i < n; i++) { for (j = 0; j < n; j++) { circle(ctx, pad + i * step, pad + j * step, Math.max(2.5, size * 0.016), opts.dotColor || COL.usui); } }
+    }
+    segs = setToSegs(set);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (s = 0; s < segs.length; s++) {
+      x1 = pad + segs[s][0][0] * step; y1 = pad + segs[s][0][1] * step; x2 = pad + segs[s][1][0] * step; y2 = pad + segs[s][1][1] * step;
+      line(ctx, x1, y1, x2, y2, opts.color || COL.sumi, opts.lw || Math.max(3, size * 0.03));
+    }
+    return { pad: pad, step: step };
+  }
+  CM.drawDots = drawDots;
+
+  /* ================= 1 てんせん（点図形の 模写）＝点を タップして 同じ形を つくる ================= */
+  var TEN_LV = { 1: { n: 4, count: 3, diag: false, maxLen: 1 }, 2: { n: 5, count: 5, diag: true, maxLen: 1 }, 3: { n: 5, count: 7, diag: true, maxLen: 2 } };
+  function makeTen(level) {
+    var lv = TEN_LV[level], set = makePath(lv.n, lv.count, lv.diag, lv.maxLen);
+    return { g: 'ten', level: level, n: lv.n, model: set, modelSig: segSetSig(set), kind: 'tap' };
+  }
+
+  /* ================= 2 かがみ・みずうみ ================= */
+  var KAGAMI_LV = { 1: { n: 4, count: 3, diag: false, maxLen: 1, axes: ['x'] }, 2: { n: 4, count: 4, diag: true, maxLen: 1, axes: ['x', 'y'] }, 3: { n: 5, count: 6, diag: true, maxLen: 2, axes: ['x', 'y'] } };
+  function makeKagami(level) {
+    var lv = KAGAMI_LV[level], tries, set, segs, axis, correct, cands, seen, sig, i, list, v, q, idx;
+    for (tries = 0; tries < 80; tries++) {
+      set = makePath(lv.n, lv.count, lv.diag, lv.maxLen); segs = setToSegs(set);
+      axis = pick(lv.axes);
+      correct = segsToSet(mapSegs(segs, axis === 'x' ? flipX : flipY, lv.n));
+      if (segSetSig(correct) === segSetSig(set)) { continue; }     /* 映しても 同じ形は だめ */
+      seen = {}; seen[segSetSig(correct)] = true; cands = [];
+      list = [set, segsToSet(mapSegs(segs, rot180, lv.n)), segsToSet(mapSegs(segs, axis === 'x' ? flipY : flipX, lv.n)), segsToSet(mapSegs(segs, rot90, lv.n))];
+      if (level >= 2) { v = perturb(correct, lv.n); if (v) { list.splice(1, 0, v); } }
+      for (i = 0; i < list.length && cands.length < 3; i++) {
+        sig = segSetSig(list[i]);
+        if (seen[sig]) { continue; }
+        seen[sig] = true; cands.push(list[i]);
+      }
+      if (cands.length < 3) { continue; }
+      cands = shuffle([correct].concat(cands));
+      idx = -1; for (i = 0; i < 4; i++) { if (segSetSig(cands[i]) === segSetSig(correct)) { idx = i; } }
+      q = { g: 'kagami', level: level, n: lv.n, model: set, axis: axis, choices: cands, answerIndex: idx, kind: 'choose' };
+      return q;
+    }
+    return null;
+  }
+
+  /* ================= 3 かぞえる ================= */
+  var KAZOE_LV = { 1: { total: [8, 10], target: [3, 6], kinds: 2 }, 2: { total: [13, 16], target: [5, 9], kinds: 3 }, 3: { total: [18, 22], target: [8, 13], kinds: 4 } };
+  var KAZOE_KINDS = ['kuro', 'maru', 'sankaku', 'batsu', 'shikaku', 'hoshi'];
+  function makeKazoe(level) {
+    var lv = KAZOE_LV[level], total, target, kinds, items = [], spots = [], i, k, r, c, n = 5, kindList;
+    total = lv.total[0] + ri(lv.total[1] - lv.total[0] + 1);
+    target = lv.target[0] + ri(lv.target[1] - lv.target[0] + 1);
+    if (target > total - 2) { target = total - 2; }
+    kindList = shuffle(KAZOE_KINDS); kinds = kindList.slice(0, lv.kinds + 1);
+    k = kinds[0];
+    for (i = 0; i < n * n; i++) { spots.push(i); }
+    spots = shuffle(spots).slice(0, total);
+    for (i = 0; i < total; i++) {
+      r = Math.floor(spots[i] / n); c = spots[i] % n;
+      items.push({ x: (c + 0.5) / n + (rnd() - 0.5) * 0.09, y: (r + 0.5) / n + (rnd() - 0.5) * 0.09, kind: i < target ? k : kinds[1 + ri(kinds.length - 1)] });
+    }
+    items = shuffle(items);
+    return { g: 'kazoe', level: level, items: items, target: k, answer: target, choices: uniqNums(target, 4, 1, 25), answerIndex: -1, kind: 'choose', numeric: true };
+  }
+
+  /* ================= 4 シーソー ================= */
+  var SHISO_KINDS = ['kuro', 'sankaku', 'shikaku', 'hoshi', 'maru'];
+  var SHISO_LV = { 1: { items: 3, asks: ['heavy'] }, 2: { items: 4, asks: ['heavy', 'light'] }, 3: { items: 4, asks: ['heavy', 'light', 'second'] } };
+  function makeShiso(level) {
+    var lv = SHISO_LV[level], kinds = shuffle(SHISO_KINDS).slice(0, lv.items), order = shuffle(kinds), pairs = [], i, ask, answer, choices, q;
+    /* order[0] が いちばん おもい。となり同士の くらべ（鎖）で ぜんぶ 決まる */
+    for (i = 0; i < order.length - 1; i++) {
+      pairs.push(rnd() < 0.5 ? { left: order[i], right: order[i + 1], down: 'left' } : { left: order[i + 1], right: order[i], down: 'right' });
+    }
+    pairs = shuffle(pairs);
+    ask = pick(lv.asks);
+    answer = ask === 'heavy' ? order[0] : (ask === 'light' ? order[order.length - 1] : order[1]);
+    choices = shuffle(kinds);
+    q = { g: 'shiso', level: level, pairs: pairs, order: order, ask: ask, choices: choices, answerIndex: choices.indexOf(answer), kind: 'choose', shapeChoices: true };
+    return q;
+  }
+
+  /* ================= 5 トンネル（ブラックボックス） ================= */
+  var TON_KINDS = ['hoshi', 'kuro', 'shikaku', 'sankaku'];
+  var TON_LV = { 1: { boxes: 2, chain: 1, deltas: [1, 2, -1] }, 2: { boxes: 3, chain: 2, deltas: [1, 2, 3, -1, -2] }, 3: { boxes: 3, chain: 3, deltas: [1, 2, 3, -1, -2, -3] } };
+  function makeTonneru(level) {
+    var lv = TON_LV[level], kinds = shuffle(TON_KINDS).slice(0, lv.boxes), rules = [], i, tries, start, chain, v, k, ok, examples, d, deltas;
+    deltas = shuffle(lv.deltas);
+    for (i = 0; i < lv.boxes; i++) { rules.push({ kind: kinds[i], delta: deltas[i % deltas.length] }); }
+    for (tries = 0; tries < 100; tries++) {
+      start = 1 + ri(5); chain = []; v = start; ok = true;
+      for (i = 0; i < lv.chain; i++) { k = ri(lv.boxes); if (i > 0 && k === chain[i - 1]) { k = (k + 1) % lv.boxes; } chain.push(k); v += rules[k].delta; if (v < 0 || v > 9) { ok = false; break; } }
+      if (!ok) { continue; }
+      examples = [];
+      for (i = 0; i < lv.boxes; i++) { d = rules[i].delta; examples.push({ box: i, inN: d < 0 ? 2 + ri(3) + (-d) : 1 + ri(4), outN: 0 }); examples[i].outN = examples[i].inN + d; }
+      return { g: 'tonneru', level: level, rules: rules, examples: examples, start: start, chain: chain, answer: v, choices: uniqNums(v, 4, 0, 9), answerIndex: -1, kind: 'choose', numeric: true };
+    }
+    return null;
+  }
+
+  /* ================= 6 おなじ かたち（3×3の ますに しるし） =================
+     しるし＝maru/kuro/shikaku/batsu（向きなし）・sankaku（4向き）・hanbun（4向き）・sen（2向き） */
+  var MARKS = {
+    maru: { period: 1 }, kuro: { period: 1 }, shikaku: { period: 1 }, batsu: { period: 1 },
+    sankaku: { period: 4 }, hanbun: { period: 4 }, sen: { period: 2 }
+  };
+  var MARK_NAMES = ['maru', 'kuro', 'shikaku', 'batsu', 'sankaku', 'hanbun', 'sen'];
+  var ORIENTED = ['sankaku', 'hanbun', 'sen'];
+  function transformGrid(fig, rot) {
+    var n = fig.n, out = [], i, cell, r, c, o, k, nr, nc;
+    for (i = 0; i < fig.cells.length; i++) {
+      cell = fig.cells[i]; r = cell.r; c = cell.c; o = cell.o;
+      for (k = 0; k < rot; k++) { nr = c; nc = n - 1 - r; r = nr; c = nc; o = (o + 1) % MARKS[cell.m].period; }
+      out.push({ r: r, c: c, m: cell.m, o: o });
+    }
+    return { n: n, cells: out };
+  }
+  CM.transformGrid = transformGrid;
+  function gridSig(fig) {
+    var parts = [], i, cell;
+    for (i = 0; i < fig.cells.length; i++) { cell = fig.cells[i]; parts.push(cell.r + ',' + cell.c + ',' + cell.m + ',' + cell.o); }
+    parts.sort(); return 'g' + fig.n + ':' + parts.join(';');
+  }
+  CM.gridSig = gridSig;
+  function gridDistinctRot(fig) { var seen = {}, k, s; for (k = 0; k < 4; k++) { s = gridSig(transformGrid(fig, k)); if (seen[s]) { return false; } seen[s] = true; } return true; }
+  function makeGrid(n, count) {
+    var tries, spots, i, cells, m, fig, hasO;
+    for (tries = 0; tries < 200; tries++) {
+      spots = []; for (i = 0; i < n * n; i++) { spots.push(i); }
+      spots = shuffle(spots).slice(0, count); cells = []; hasO = false;
+      for (i = 0; i < spots.length; i++) {
+        m = (i === 0) ? pick(ORIENTED) : pick(MARK_NAMES);
+        if (ORIENTED.indexOf(m) >= 0) { hasO = true; }
+        cells.push({ r: Math.floor(spots[i] / n), c: spots[i] % n, m: m, o: ri(MARKS[m].period) });
+      }
+      fig = { n: n, cells: cells };
+      if (hasO && gridDistinctRot(fig)) { return fig; }
+    }
+    return { n: 3, cells: [{ r: 0, c: 0, m: 'sankaku', o: 1 }, { r: 1, c: 1, m: 'kuro', o: 0 }, { r: 2, c: 1, m: 'sen', o: 0 }] };
+  }
+  function cloneGrid(fig) { var out = [], i; for (i = 0; i < fig.cells.length; i++) { out.push({ r: fig.cells[i].r, c: fig.cells[i].c, m: fig.cells[i].m, o: fig.cells[i].o }); } return { n: fig.n, cells: out }; }
+  function gridOneTurn(fig) {   /* 1つの しるしの 向きだけ ちがう */
+    var c = cloneGrid(fig), idx = [], i, p;
+    for (i = 0; i < c.cells.length; i++) { if (MARKS[c.cells[i].m].period > 1) { idx.push(i); } }
+    if (!idx.length) { return null; }
+    p = pick(idx); c.cells[p].o = (c.cells[p].o + 1 + ri(MARKS[c.cells[p].m].period - 1)) % MARKS[c.cells[p].m].period;
+    return c;
+  }
+  function gridOneMove(fig) {   /* 1つの しるしの 場所だけ ちがう */
+    var c = cloneGrid(fig), used = {}, i, p, tries, r, cc;
+    for (i = 0; i < c.cells.length; i++) { used[c.cells[i].r + ',' + c.cells[i].c] = true; }
+    p = ri(c.cells.length);
+    for (tries = 0; tries < 30; tries++) { r = ri(c.n); cc = ri(c.n); if (!used[r + ',' + cc]) { c.cells[p].r = r; c.cells[p].c = cc; return c; } }
+    return null;
+  }
+  function gridSwapKind(fig) {  /* 1つの しるしの 種類だけ ちがう */
+    var c = cloneGrid(fig), p = ri(c.cells.length), m = pick(MARK_NAMES), tries = 0;
+    while (m === c.cells[p].m && tries < 10) { m = pick(MARK_NAMES); tries++; }
+    if (m === c.cells[p].m) { return null; }
+    c.cells[p].m = m; c.cells[p].o = c.cells[p].o % MARKS[m].period; return c;
+  }
+  var ONAJI_LV = { 1: { count: 3, rots: [0] }, 2: { count: 4, rots: [0, 1, 3] }, 3: { count: 4, rots: [1, 2, 3] } };
+  function makeOnaji(level) {
+    var lv = ONAJI_LV[level], tries, base, rot, correct, pool, cands, seen, i, s, q, idx;
+    for (tries = 0; tries < 60; tries++) {
+      base = makeGrid(3, lv.count); rot = pick(lv.rots); correct = transformGrid(base, rot);
+      seen = {}; seen[gridSig(correct)] = true; cands = [];
+      pool = shuffle([gridOneTurn(correct), gridOneMove(correct), gridSwapKind(correct), gridOneTurn(correct), transformGrid(base, (rot + 1 + ri(3)) % 4)]);
+      for (i = 0; i < pool.length && cands.length < 3; i++) {
+        if (!pool[i]) { continue; }
+        s = gridSig(pool[i]); if (seen[s]) { continue; } seen[s] = true; cands.push(pool[i]);
+      }
+      if (cands.length < 3) { continue; }
+      cands = shuffle([correct].concat(cands));
+      idx = -1; for (i = 0; i < 4; i++) { if (gridSig(cands[i]) === gridSig(correct)) { idx = i; } }
+      q = { g: 'onaji', level: level, base: base, rot: rot, choices: cands, answerIndex: idx, kind: 'choose', gridChoices: true };
+      return q;
+    }
+    return null;
+  }
+
+  /* ================= 7 かさねる（重ね図形）＝3×3の点に 線を かいた 3まいを かさねる ================= */
+  var KASANE_LV = { 1: { sheets: 2, per: [1, 2], diag: false }, 2: { sheets: 3, per: [1, 2], diag: true }, 3: { sheets: 3, per: [2, 3], diag: true } };
+  function makeKasane(level) {
+    var lv = KASANE_LV[level], tries, sheets, i, j, union, k, cands, seen, s, q, idx, v, segs, pool, n = 3, set, cnt;
+    for (tries = 0; tries < 80; tries++) {
+      sheets = []; union = {};
+      for (i = 0; i < lv.sheets; i++) {
+        cnt = lv.per[0] + ri(lv.per[1] - lv.per[0] + 1);
+        set = makePath(n, cnt, lv.diag, 1);
+        sheets.push(set);
+        for (k in set) { if (set.hasOwnProperty(k)) { union[k] = set[k]; } }
+      }
+      /* かさねて 線が ふえていないと つまらない */
+      if (segCount(union) < 3) { continue; }
+      cnt = 0; for (i = 0; i < sheets.length; i++) { cnt += segCount(sheets[i]); }
+      if (cnt === segCount(union) && level >= 2 && rnd() < 0.6) { continue; }
+      seen = {}; seen[segSetSig(union)] = true; cands = []; pool = [];
+      /* まちがい＝1本 たりない・1本 多い・1本 ずれている・1まいが 抜けている */
+      segs = setToSegs(union);
+      v = {}; j = ri(segs.length); for (i = 0; i < segs.length; i++) { if (i !== j) { v[segKey(segs[i][0], segs[i][1])] = segs[i]; } } pool.push(v);
+      v = perturb(union, n); if (v) { pool.push(v); }
+      v = {}; for (k in union) { if (union.hasOwnProperty(k)) { v[k] = union[k]; } }
+      (function () { var a = [ri(n), ri(n)], d = pick(lv.diag ? DIRS8 : DIRS8.slice(0, 4)), b = [a[0] + d[0], a[1] + d[1]], kk; if (b[0] >= 0 && b[1] >= 0 && b[0] < n && b[1] < n) { kk = segKey(a, b); if (!union[kk]) { v[kk] = [a, b]; pool.push(v); } } })();
+      if (sheets.length >= 3) { v = {}; for (i = 1; i < sheets.length; i++) { for (k in sheets[i]) { if (sheets[i].hasOwnProperty(k)) { v[k] = sheets[i][k]; } } } pool.push(v); }
+      pool = shuffle(pool);
+      for (i = 0; i < pool.length && cands.length < 3; i++) { s = segSetSig(pool[i]); if (seen[s] || segCount(pool[i]) === 0) { continue; } seen[s] = true; cands.push(pool[i]); }
+      if (cands.length < 3) { continue; }
+      cands = shuffle([union].concat(cands));
+      idx = -1; for (i = 0; i < 4; i++) { if (segSetSig(cands[i]) === segSetSig(union)) { idx = i; } }
+      q = { g: 'kasane', level: level, n: n, sheets: sheets, union: union, choices: cands, answerIndex: idx, kind: 'choose' };
+      return q;
+    }
+    return null;
+  }
+
+  /* ================= もんだいの 入口 ================= */
+  var GENRES = [
+    { id: 'ten', name: 'てんせん', sub: 'おなじ かたちを てんで かく', make: makeTen },
+    { id: 'kagami', name: 'かがみ', sub: 'かがみに うつすと どれ？', make: makeKagami },
+    { id: 'kazoe', name: 'かぞえる', sub: 'えらんで かぞえる', make: makeKazoe },
+    { id: 'shiso', name: 'シーソー', sub: 'どれが いちばん おもい？', make: makeShiso },
+    { id: 'tonneru', name: 'トンネル', sub: 'とおると かずが かわる', make: makeTonneru },
+    { id: 'onaji', name: 'おなじ かたち', sub: 'おなじ かたちは どれ？', make: makeOnaji },
+    { id: 'kasane', name: 'かさねる', sub: 'かさねると どうなる？', make: makeKasane }
+  ];
+  CM.GENRES = GENRES;
+  var GENRE_BY_ID = {};
+  (function () { var i; for (i = 0; i < GENRES.length; i++) { GENRE_BY_ID[GENRES[i].id] = GENRES[i]; } })();
+  CM.genreById = function (id) { return GENRE_BY_ID[id]; };
+  CM.LEVEL_NAME = { 1: 'やさしい', 2: 'ふつう', 3: 'むずかしい' };
+
+  function makeQuestion(gid, level) {
+    var q = null, tries, g = GENRE_BY_ID[gid];
+    for (tries = 0; tries < 5 && !q; tries++) { q = g.make(level); }
+    if (!q) { q = makeKazoe(1); }
+    if (q.numeric) { q.answerIndex = q.choices.indexOf(q.answer); }
+    return q;
+  }
+  CM.makeQuestion = makeQuestion;
+
+  /* ================= もんだい文（よみあげ にも つかう） ================= */
+  function questionText(q) {
+    var t;
+    if (q.g === 'ten') { return 'ひだりと おなじ かたちに なるように、みぎの てんを じゅんばんに タップしてね'; }
+    if (q.g === 'kagami') { return (q.axis === 'x' ? 'かがみに うつすと、どの かたちに なる？' : 'みずうみに うつすと、どの かたちに なる？'); }
+    if (q.g === 'kazoe') { return SHAPE_NAMES[q.target] + ' は いくつ ある？'; }
+    if (q.g === 'shiso') {
+      t = q.ask === 'heavy' ? 'いちばん おもい' : (q.ask === 'light' ? 'いちばん かるい' : '2ばんめに おもい');
+      return 'シーソーを みて、' + t + ' かたちを えらんでね';
+    }
+    if (q.g === 'tonneru') { return 'おやくそくの とおり トンネルを とおると、ボールは いくつに なる？'; }
+    if (q.g === 'onaji') { return q.rot === 0 ? 'ひだりと おなじ かたちは どれ？' : 'ひだりの かたちを まわした ものは どれ？'; }
+    if (q.g === 'kasane') { return 'うえの かみを ぜんぶ かさねると、どの かたちに なる？'; }
+    return '';
+  }
+  CM.questionText = questionText;
+
+  /* ================= 絵を 描く ================= */
+  function setupCanvas(canvas) {
+    var css = canvas.clientWidth || parseInt(canvas.getAttribute('width'), 10) || 120, dpr = global.devicePixelRatio || 1, ctx, px = Math.round(css * dpr), h = canvas.clientHeight || css, py = Math.round(h * dpr);
+    if (canvas.width !== px || canvas.height !== py) { canvas.width = px; canvas.height = py; }
+    ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.scale(dpr, dpr);
+    return { ctx: ctx, w: css, h: h };
+  }
+  CM.setupCanvas = setupCanvas;
+  function paper(ctx, w, h, frame) {
+    ctx.fillStyle = COL.kami; ctx.strokeStyle = frame || COL.sumi; ctx.lineWidth = Math.max(2, w * 0.015);
+    roundRect(ctx, 1.5, 1.5, w - 3, h - 3, w * 0.06); ctx.fill(); ctx.stroke();
+  }
+  /* 点の かたち 1まい */
+  function paintDotFig(canvas, n, set, opts) {
+    var c = setupCanvas(canvas), s = Math.min(c.w, c.h);
+    paper(c.ctx, c.w, c.h, opts && opts.frame);
+    c.ctx.translate((c.w - s) / 2, (c.h - s) / 2);
+    return drawDots(c.ctx, n, s, set, opts);
+  }
+  CM.paintDotFig = paintDotFig;
+  /* かがみ の もと＝右（または 下）に 鏡の線 */
+  function paintKagamiStem(canvas, q) {
+    var c = setupCanvas(canvas), s = Math.min(c.w, c.h) * 0.86, m;
+    paper(c.ctx, c.w, c.h);
+    c.ctx.save(); c.ctx.translate(q.axis === 'x' ? 2 : (c.w - s) / 2, q.axis === 'x' ? (c.h - s) / 2 : 2);
+    m = drawDots(c.ctx, q.n, s, q.model, {});
+    c.ctx.restore();
+    c.ctx.setLineDash && c.ctx.setLineDash([8, 6]);
+    if (q.axis === 'x') { line(c.ctx, s + 6, 8, s + 6, c.h - 8, COL.ao, 5); } else { line(c.ctx, 8, s + 6, c.w - 8, s + 6, COL.ao, 5); }
+    c.ctx.setLineDash && c.ctx.setLineDash([]);
+    return m;
+  }
+  CM.paintKagamiStem = paintKagamiStem;
+  /* かぞえる の ばらばらの かたち */
+  function paintKazoe(canvas, q) {
+    var c = setupCanvas(canvas), i, it, r = Math.min(c.w, c.h) * 0.045;
+    paper(c.ctx, c.w, c.h);
+    for (i = 0; i < q.items.length; i++) {
+      it = q.items[i];
+      c.ctx.save(); c.ctx.translate(it.x * c.w, it.y * c.h); drawShape(c.ctx, it.kind, r); c.ctx.restore();
+    }
+  }
+  CM.paintKazoe = paintKazoe;
+  /* かたち 1こ（えらびし） */
+  function paintShape(canvas, kind, fill) {
+    var c = setupCanvas(canvas), r = Math.min(c.w, c.h) * 0.3;
+    c.ctx.translate(c.w / 2, c.h / 2); drawShape(c.ctx, kind, r, fill);
+  }
+  CM.paintShape = paintShape;
+  /* シーソー ぜんぶ（たてに ならべる） */
+  function paintShiso(canvas, q) {
+    var c = setupCanvas(canvas), i, p, rowH = c.h / q.pairs.length, cx = c.w / 2, half = c.w * 0.36, tilt = 0.2, cy, r = Math.min(rowH * 0.22, c.w * 0.08), dx, dy;
+    paper(c.ctx, c.w, c.h);
+    for (i = 0; i < q.pairs.length; i++) {
+      p = q.pairs[i]; cy = rowH * (i + 0.62);
+      /* だい */
+      poly(c.ctx, [[cx, cy - rowH * 0.02], [cx - rowH * 0.16, cy + rowH * 0.3], [cx + rowH * 0.16, cy + rowH * 0.3]], COL.hai, COL.sumi, 2);
+      dy = half * tilt * (p.down === 'left' ? 1 : -1);   /* 左が 下がる＝左の端が 下 */
+      line(c.ctx, cx - half, cy + dy, cx + half, cy - dy, COL.sumi, 5);
+      dx = half * 0.86;
+      c.ctx.save(); c.ctx.translate(cx - dx, cy + dy * 0.86 - r * 1.3); drawShape(c.ctx, p.left, r); c.ctx.restore();
+      c.ctx.save(); c.ctx.translate(cx + dx, cy - dy * 0.86 - r * 1.3); drawShape(c.ctx, p.right, r); c.ctx.restore();
+    }
+  }
+  CM.paintShiso = paintShiso;
+  /* トンネル＝おやくそく（例）と もんだいの 列 */
+  function drawBalls(ctx, x, y, n, r) {
+    var i, perRow = 5, cx, cy;
+    if (n === 0) { ctx.save(); ctx.font = 'bold ' + Math.round(r * 2.4) + 'px sans-serif'; ctx.fillStyle = COL.usui; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('0', x, y); ctx.restore(); return; }
+    for (i = 0; i < n; i++) {
+      cx = x + ((i % perRow) - Math.min(n, perRow) / 2 + 0.5) * r * 2.3; cy = y + (Math.floor(i / perRow) - (Math.ceil(n / perRow) - 1) / 2) * r * 2.3;
+      circle(ctx, cx, cy, r, COL.shiro, COL.sumi, 2);
+    }
+  }
+  function drawTunnel(ctx, x, y, w, h, kind) {
+    ctx.save();
+    ctx.fillStyle = COL.sumi; ctx.beginPath(); ctx.moveTo(x - w / 2, y + h / 2); ctx.lineTo(x - w / 2, y - h / 6); ctx.arc(x - w / 2 + h / 3, y - h / 6, h / 3, Math.PI, Math.PI * 1.5); ctx.lineTo(x + w / 2, y - h / 2); ctx.lineTo(x + w / 2, y + h / 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = COL.kami; ctx.fillRect(x - w / 2 + h / 3, y - h / 2 + 3, w / 2 + h / 6 - 3, h - 6);
+    ctx.translate(x + w / 4 + h / 6, y); drawShape(ctx, kind, h * 0.2);
+    ctx.restore();
+  }
+  function paintTonneru(canvas, q) {
+    var c = setupCanvas(canvas), i, rows = q.rules.length + 1, rowH = c.h / rows, y, r = Math.min(rowH * 0.11, c.w * 0.028), ex, tw = c.w * 0.2, th = rowH * 0.62, x, step;
+    paper(c.ctx, c.w, c.h);
+    c.ctx.font = 'bold ' + Math.round(rowH * 0.3) + 'px sans-serif'; c.ctx.textAlign = 'center'; c.ctx.textBaseline = 'middle';
+    function arrow(ax, ay) { line(c.ctx, ax - rowH * 0.16, ay, ax + rowH * 0.12, ay, COL.sumi, 3); poly(c.ctx, [[ax + rowH * 0.2, ay], [ax + rowH * 0.06, ay - rowH * 0.09], [ax + rowH * 0.06, ay + rowH * 0.09]], COL.sumi, COL.sumi, 1); }
+    /* おやくそく */
+    for (i = 0; i < q.examples.length; i++) {
+      ex = q.examples[i]; y = rowH * (i + 0.5);
+      drawBalls(c.ctx, c.w * 0.17, y, ex.inN, r);
+      arrow(c.w * 0.35, y);
+      drawTunnel(c.ctx, c.w * 0.5, y, tw, th, q.rules[ex.box].kind);
+      arrow(c.w * 0.65, y);
+      drawBalls(c.ctx, c.w * 0.83, y, ex.outN, r);
+    }
+    line(c.ctx, 10, rowH * q.examples.length, c.w - 10, rowH * q.examples.length, COL.usui, 2);
+    /* もんだい */
+    y = rowH * (rows - 0.5); step = (c.w - 40) / (q.chain.length + 2);
+    drawBalls(c.ctx, 20 + step * 0.5, y, q.start, r);
+    for (i = 0; i < q.chain.length; i++) {
+      x = 20 + step * (i + 1.5);
+      arrow(x - step / 2, y);
+      drawTunnel(c.ctx, x, y, Math.min(tw, step * 0.7), th, q.rules[q.chain[i]].kind);
+    }
+    x = 20 + step * (q.chain.length + 1.5);
+    arrow(x - step / 2, y);
+    c.ctx.strokeStyle = COL.ao; c.ctx.lineWidth = 3; c.ctx.strokeRect(x - rowH * 0.28, y - rowH * 0.28, rowH * 0.56, rowH * 0.56);
+    c.ctx.fillStyle = COL.ao; c.ctx.fillText('？', x, y);
+  }
+  CM.paintTonneru = paintTonneru;
+  /* ますの しるし */
+  function drawMark(ctx, m, o, s) {
+    var h = s * 0.32, k;
+    ctx.lineWidth = Math.max(2, s * 0.09); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (m === 'maru') { ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.strokeStyle = COL.ao; ctx.stroke(); }
+    else if (m === 'kuro') { ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fillStyle = COL.murasaki; ctx.fill(); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2; ctx.stroke(); }
+    else if (m === 'shikaku') { ctx.beginPath(); ctx.rect(-h, -h, h * 2, h * 2); ctx.fillStyle = COL.mizu; ctx.fill(); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2; ctx.stroke(); }
+    else if (m === 'batsu') { ctx.strokeStyle = COL.sumi; ctx.beginPath(); ctx.moveTo(-h, -h); ctx.lineTo(h, h); ctx.moveTo(h, -h); ctx.lineTo(-h, h); ctx.stroke(); }
+    else if (m === 'sankaku') { ctx.save(); ctx.rotate(o * Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -h * 1.1); ctx.lineTo(h * 1.05, h * 0.8); ctx.lineTo(-h * 1.05, h * 0.8); ctx.closePath(); ctx.fillStyle = COL.daidai; ctx.fill(); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
+    else if (m === 'hanbun') { k = s * 0.36; ctx.save(); ctx.rotate(o * Math.PI / 2); ctx.beginPath(); ctx.rect(-k, -k, k * 2, k * 2); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-k, -k); ctx.lineTo(k, -k); ctx.lineTo(-k, k); ctx.closePath(); ctx.fillStyle = COL.midori; ctx.fill(); ctx.restore(); }
+    else if (m === 'sen') { ctx.save(); ctx.rotate(o * Math.PI / 2); ctx.strokeStyle = COL.sumi; ctx.lineWidth = Math.max(3, s * 0.12); ctx.beginPath(); ctx.moveTo(-h * 1.1, 0); ctx.lineTo(h * 1.1, 0); ctx.stroke(); ctx.restore(); }
+  }
+  CM.drawMark = drawMark;
+  function paintGridFig(canvas, fig, extraRot) {
+    var c = setupCanvas(canvas), s = Math.min(c.w, c.h) * 0.8, n = fig.n, cs = s / n, i, cell;
+    paper(c.ctx, c.w, c.h);
+    c.ctx.translate(c.w / 2, c.h / 2); c.ctx.rotate(extraRot || 0);
+    c.ctx.strokeStyle = COL.usui; c.ctx.lineWidth = 1.5;
+    for (i = 1; i < n; i++) { line(c.ctx, -s / 2 + cs * i, -s / 2, -s / 2 + cs * i, s / 2, COL.usui, 1.5); line(c.ctx, -s / 2, -s / 2 + cs * i, s / 2, -s / 2 + cs * i, COL.usui, 1.5); }
+    c.ctx.strokeStyle = COL.sumi; c.ctx.lineWidth = 2.5; c.ctx.strokeRect(-s / 2, -s / 2, s, s);
+    for (i = 0; i < fig.cells.length; i++) {
+      cell = fig.cells[i]; c.ctx.save(); c.ctx.translate(-s / 2 + cs * (cell.c + 0.5), -s / 2 + cs * (cell.r + 0.5)); drawMark(c.ctx, cell.m, cell.o, cs); c.ctx.restore();
+    }
+  }
+  CM.paintGridFig = paintGridFig;
+  /* かさねる＝3まいを よこに ならべて ＋ で つなぐ */
+  function paintKasaneStem(canvas, q) {
+    var c = setupCanvas(canvas), k = q.sheets.length, s = Math.min(c.h * 0.9, (c.w - 20 * (k - 1)) / k), i, x0 = (c.w - (s * k + 20 * (k - 1))) / 2;
+    paper(c.ctx, c.w, c.h);
+    c.ctx.font = 'bold ' + Math.round(s * 0.3) + 'px sans-serif'; c.ctx.fillStyle = COL.sumi; c.ctx.textAlign = 'center'; c.ctx.textBaseline = 'middle';
+    for (i = 0; i < k; i++) {
+      c.ctx.save(); c.ctx.translate(x0 + i * (s + 20), (c.h - s) / 2);
+      c.ctx.strokeStyle = COL.hai; c.ctx.lineWidth = 2; c.ctx.strokeRect(0, 0, s, s);
+      drawDots(c.ctx, q.n, s, q.sheets[i], {});
+      c.ctx.restore();
+      if (i < k - 1) { c.ctx.fillText('＋', x0 + i * (s + 20) + s + 10, c.h / 2); }
+    }
+  }
+  CM.paintKasaneStem = paintKasaneStem;
+
+  /* ================= おと（ファイルを使わず その場で つくる） ================= */
+  var NOTE = { C5: 523.3, D5: 587.3, E5: 659.3, F5: 698.5, G5: 784.0, A5: 880.0, B5: 987.8,
+    C6: 1046.5, D6: 1174.7, E6: 1318.5, F6: 1396.9, G6: 1568.0, A6: 1760.0, C7: 2093.0, E4: 329.6, G4: 392.0, A4: 440.0 };
+  CM.NOTE = NOTE;
+  var SOUNDS = {
+    tap: [['A5', 0, 0.06, 0.35, 'triangle']],
+    dot: [['E6', 0, 0.05, 0.3, 'triangle']],
+    ok: [['C6', 0, 0.09, 0.6, 'square'], ['E6', 0.08, 0.09, 0.6, 'square'], ['G6', 0.16, 0.09, 0.6, 'square'], ['C7', 0.24, 0.28, 0.6, 'square'], ['G6', 0.24, 0.28, 0.35, 'triangle']],
+    ok2: [['E6', 0, 0.09, 0.5, 'square'], ['A6', 0.09, 0.22, 0.5, 'square']],
+    oshii: [['G5', 0, 0.12, 0.45, 'sine'], ['E5', 0.13, 0.2, 0.45, 'sine']],
+    kotae: [['A4', 0, 0.16, 0.4, 'sine'], ['C5', 0.16, 0.16, 0.4, 'sine'], ['E5', 0.32, 0.26, 0.4, 'sine']],
+    round: [['C5', 0, 0.12, 0.55, 'square'], ['E5', 0.13, 0.12, 0.55, 'square'], ['G5', 0.26, 0.12, 0.55, 'square'], ['C6', 0.42, 0.55, 0.5, 'square'], ['E6', 0.42, 0.55, 0.35, 'triangle'], ['G5', 0.42, 0.55, 0.35, 'triangle']],
+    perfect: [['C5', 0, 0.1, 0.55, 'square'], ['E5', 0.1, 0.1, 0.55, 'square'], ['G5', 0.2, 0.1, 0.55, 'square'], ['C6', 0.3, 0.1, 0.55, 'square'], ['E6', 0.4, 0.1, 0.55, 'square'], ['G6', 0.5, 0.1, 0.55, 'square'], ['C7', 0.62, 0.7, 0.5, 'square'], ['E6', 0.62, 0.7, 0.35, 'triangle'], ['G6', 0.62, 0.7, 0.35, 'triangle']],
+    grow: [['G5', 0, 0.08, 0.45, 'triangle'], ['C6', 0.07, 0.08, 0.45, 'triangle'], ['E6', 0.14, 0.08, 0.45, 'triangle'], ['G6', 0.21, 0.08, 0.45, 'triangle'], ['C7', 0.28, 0.08, 0.45, 'triangle'], ['E6', 0.36, 0.08, 0.4, 'triangle'], ['G6', 0.43, 0.08, 0.4, 'triangle'], ['C7', 0.5, 0.45, 0.5, 'triangle']],
+    combo: [['C6', 0, 0.07, 0.5, 'square'], ['E6', 0.07, 0.07, 0.5, 'square'], ['G6', 0.14, 0.07, 0.5, 'square'], ['C7', 0.21, 0.07, 0.5, 'square'], ['E6', 0.3, 0.2, 0.45, 'triangle'], ['G6', 0.3, 0.2, 0.45, 'triangle'], ['C7', 0.3, 0.3, 0.45, 'triangle']]
+  };
+  CM.SOUNDS = SOUNDS;
+  var snd = { ctx: null, on: true, vol: 0.22 };
+  CM.snd = snd;
+  function audioClass() { return global.AudioContext || global.webkitAudioContext || null; }
+  snd.unlock = function () {
+    var AC, b, src;
+    try {
+      if (!snd.ctx) {
+        AC = audioClass(); if (!AC) { return false; }
+        snd.ctx = new AC();
+        b = snd.ctx.createBuffer(1, 1, 22050);
+        src = snd.ctx.createBufferSource(); src.buffer = b; src.connect(snd.ctx.destination);
+        if (src.start) { src.start(0); } else if (src.noteOn) { src.noteOn(0); }
+      }
+      if (snd.ctx.state && snd.ctx.state !== 'running' && snd.ctx.resume) { snd.ctx.resume(); }
+      return true;
+    } catch (e) { return false; }
+  };
+  function tone(ctx, freq, at, dur, vol, type) {
+    var o = ctx.createOscillator(), g = ctx.createGain(), peak = Math.max(0.0002, vol * snd.vol);
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(freq, at);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(peak, at + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g); g.connect(ctx.destination);
+    if (o.start) { o.start(at); o.stop(at + dur + 0.03); } else { o.noteOn(at); o.noteOff(at + dur + 0.03); }
+  }
+  snd.play = function (name, delay) {
+    var ctx = snd.ctx, seq = SOUNDS[name], t0, i, n;
+    if (!snd.on || !ctx || !seq) { return false; }
+    try {
+      t0 = ctx.currentTime + 0.01 + (delay || 0);
+      for (i = 0; i < seq.length; i++) { n = seq[i]; tone(ctx, NOTE[n[0]], t0 + n[1], n[2], n[3], n[4]); }
+      return true;
+    } catch (e) { return false; }
+  };
+  /* よみあげ（端末の こえ。無ければ 何もしない） */
+  snd.say = function (text) {
+    var u;
+    if (!snd.on || snd.voice === false) { return false; }
+    try {
+      if (!global.speechSynthesis || !global.SpeechSynthesisUtterance) { return false; }
+      global.speechSynthesis.cancel();
+      u = new global.SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP'; u.rate = 0.9;
+      global.speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  };
+
+  /* ================= きろく（端末内保存） ================= */
+  function freshState() {
+    var g = {}, i;
+    for (i = 0; i < GENRES.length; i++) { g[GENRES[i].id] = { level: 1, rounds: 0, q: 0, ok: 0 }; }
+    return { schema: CM.SCHEMA, name: '', perRound: 5, total: 0, cIndex: 0, cLeaves: 0, zukan: [], lap: 0, g: g, mix: { rounds: 0, q: 0, ok: 0 } };
+  }
+  CM.freshState = freshState;
+  function loadState() {
+    var raw = null, s, i;
+    try { raw = global.localStorage ? global.localStorage.getItem(CM.STORE_KEY) : null; } catch (e) { raw = null; }
+    if (!raw) { return freshState(); }
+    try { s = JSON.parse(raw); } catch (e2) { return freshState(); }
+    if (!s || s.schema !== CM.SCHEMA) { return freshState(); }
+    for (i = 0; i < GENRES.length; i++) { if (!s.g[GENRES[i].id]) { s.g[GENRES[i].id] = { level: 1, rounds: 0, q: 0, ok: 0 }; } }
+    return s;
+  }
+  function saveState(s) { try { if (global.localStorage) { global.localStorage.setItem(CM.STORE_KEY, JSON.stringify(s)); } } catch (e) { /* 保存できなくても あそべる */ } }
+  CM.loadState = loadState; CM.saveState = saveState;
+
+  /* 1まわりの あとの レベルの 上げ下げ（純粋な計算）＝5もん中 4もん 以上 はじめて正解なら 上へ・2もん 以下なら 下へ */
+  function nextLevel(level, firstOk, total) {
+    if (firstOk >= Math.ceil(total * 0.8) && level < 3) { return level + 1; }
+    if (firstOk <= Math.floor(total * 0.4) && level > 1) { return level - 1; }
+    return level;
+  }
+  CM.nextLevel = nextLevel;
+
+  /* ================= いきもの（ごほうび） ================= */
+  var GROW = [0, 6, 14, 24];
+  CM.GROW = GROW;
+  function stageOf(leaves) { if (leaves >= GROW[3]) { return 3; } if (leaves >= GROW[2]) { return 2; } if (leaves >= GROW[1]) { return 1; } return 0; }
+  CM.stageOf = stageOf;
+  var STAGE_NAME = ['たまご', 'ようちゅう', 'さなぎ', 'せいちゅう'];
+  CM.STAGE_NAME = STAGE_NAME;
+  var PICS = [
+    { id: 'sakana', name: 'さかな', draw: function (ctx) {
+      poly(ctx, [[-26, 0], [-42, -15], [-42, 15]], COL.ao, COL.sumi, 2);
+      poly(ctx, [[-16, -11], [-4, -36], [14, -11]], COL.mizu, COL.sumi, 2);
+      ellipse(ctx, -4, 0, 26, 14, COL.ao, COL.sumi, 2);
+      circle(ctx, 10, -4, 4.5, COL.shiro, COL.sumi, 1.5); circle(ctx, 11, -4, 2, COL.sumi);
+      line(ctx, 17, 5, 22, 3, COL.sumi, 2);
+    } },
+    { id: 'katatsumuri', name: 'かたつむり', draw: function (ctx) {
+      ellipse(ctx, 6, 18, 30, 8, COL.murasaki, COL.sumi, 2); circle(ctx, 26, 8, 9, COL.murasaki, COL.sumi, 2);
+      line(ctx, 29, 0, 33, -12, COL.sumi, 2.5); circle(ctx, 33, -13, 2.5, COL.sumi); line(ctx, 23, 0, 21, -10, COL.sumi, 2.5); circle(ctx, 21, -11, 2.5, COL.sumi);
+      circle(ctx, -10, -2, 20, COL.daidai, COL.sumi, 2);
+      ctx.beginPath(); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2.5; ctx.arc(-10, -2, 12, 0, Math.PI * 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-8, -4, 5, 0, Math.PI * 1.5); ctx.stroke(); circle(ctx, 29, 6, 1.8, COL.sumi);
+    } },
+    { id: 'tentoumushi', name: 'てんとうむし', draw: function (ctx) {
+      line(ctx, -16, -6, -30, -14, COL.sumi, 2.5); line(ctx, -20, 6, -34, 8, COL.sumi, 2.5); line(ctx, -14, 18, -26, 28, COL.sumi, 2.5);
+      line(ctx, 16, -6, 30, -14, COL.sumi, 2.5); line(ctx, 20, 6, 34, 8, COL.sumi, 2.5); line(ctx, 14, 18, 26, 28, COL.sumi, 2.5);
+      circle(ctx, 0, 4, 23, COL.aka, COL.sumi, 2); circle(ctx, 0, -18, 10, COL.sumi); line(ctx, 0, -10, 0, 27, COL.sumi, 2);
+      circle(ctx, -11, -2, 5.5, COL.sumi); circle(ctx, 10, 9, 5.5, COL.sumi); circle(ctx, -8, 16, 4.5, COL.sumi); circle(ctx, 11, -4, 4, COL.sumi);
+    } },
+    { id: 'kotori', name: 'ことり', draw: function (ctx) {
+      poly(ctx, [[-16, 2], [-38, -10], [-34, 8]], COL.mizu, COL.sumi, 2);
+      line(ctx, 4, 18, 4, 30, COL.sumi, 2.5); line(ctx, -6, 18, -6, 30, COL.sumi, 2.5);
+      ellipse(ctx, 0, 4, 21, 15, COL.mizu, COL.sumi, 2); ellipse(ctx, -3, 3, 12, 6, COL.ao, COL.sumi, 1.5);
+      circle(ctx, 17, -13, 11, COL.mizu, COL.sumi, 2); poly(ctx, [[26, -15], [38, -11], [26, -7]], COL.daidai, COL.sumi, 1.5); circle(ctx, 19, -15, 2.2, COL.sumi);
+    } },
+    { id: 'imomushi', name: 'いもむし', draw: function (ctx) {
+      circle(ctx, -28, 10, 9, COL.midori, COL.sumi, 2); circle(ctx, -13, 7, 10, COL.midori, COL.sumi, 2); circle(ctx, 3, 5, 11, COL.midori, COL.sumi, 2);
+      line(ctx, 25, -10, 30, -24, COL.sumi, 2.5); circle(ctx, 30, -25, 2.5, COL.sumi); line(ctx, 18, -10, 16, -22, COL.sumi, 2.5); circle(ctx, 16, -23, 2.5, COL.sumi);
+      circle(ctx, 22, 1, 13, COL.midori, COL.sumi, 2); circle(ctx, 27, -3, 2.5, COL.sumi); line(ctx, 27, 5, 31, 7, COL.sumi, 2);
+    } },
+    { id: 'kabutomushi', name: 'かぶとむし', draw: function (ctx) {
+      line(ctx, -12, -2, -30, -12, COL.sumi, 3); line(ctx, -14, 8, -34, 12, COL.sumi, 3); line(ctx, -8, 18, -26, 30, COL.sumi, 3);
+      line(ctx, 12, -2, 30, -12, COL.sumi, 3); line(ctx, 14, 8, 34, 12, COL.sumi, 3); line(ctx, 8, 18, 26, 30, COL.sumi, 3);
+      ellipse(ctx, 0, 8, 20, 24, '#5a3b1e', COL.sumi, 2); line(ctx, 0, -10, 0, 30, COL.sumi, 1.5);
+      ellipse(ctx, 0, -18, 12, 9, '#5a3b1e', COL.sumi, 2);
+      line(ctx, 0, -24, 0, -40, COL.sumi, 4); line(ctx, 0, -40, -9, -48, COL.sumi, 3.5); line(ctx, 0, -40, 9, -48, COL.sumi, 3.5);
+      circle(ctx, -5, -19, 1.8, COL.shiro); circle(ctx, 5, -19, 1.8, COL.shiro);
+    } },
+    { id: 'kaeru', name: 'かえる', draw: function (ctx) {
+      ellipse(ctx, -24, 18, 12, 7, COL.midori, COL.sumi, 2); ellipse(ctx, 24, 18, 12, 7, COL.midori, COL.sumi, 2);
+      ellipse(ctx, 0, 6, 28, 20, COL.midori, COL.sumi, 2);
+      circle(ctx, -13, -14, 9, COL.midori, COL.sumi, 2); circle(ctx, 13, -14, 9, COL.midori, COL.sumi, 2);
+      circle(ctx, -13, -14, 4.5, COL.shiro, COL.sumi, 1); circle(ctx, 13, -14, 4.5, COL.shiro, COL.sumi, 1); circle(ctx, -12, -14, 2, COL.sumi); circle(ctx, 14, -14, 2, COL.sumi);
+      ctx.beginPath(); ctx.arc(0, 2, 12, Math.PI * 0.15, Math.PI * 0.85); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2; ctx.stroke();
+    } },
+    { id: 'chou', name: 'ちょう', draw: function (ctx) {
+      ellipse(ctx, -20, -10, 18, 15, COL.daidai, COL.sumi, 2); ellipse(ctx, 20, -10, 18, 15, COL.daidai, COL.sumi, 2);
+      ellipse(ctx, -16, 14, 13, 11, COL.ki, COL.sumi, 2); ellipse(ctx, 16, 14, 13, 11, COL.ki, COL.sumi, 2);
+      circle(ctx, -22, -10, 5, COL.shiro, COL.sumi, 1.5); circle(ctx, 22, -10, 5, COL.shiro, COL.sumi, 1.5);
+      ellipse(ctx, 0, 2, 5, 22, COL.sumi); line(ctx, -2, -20, -10, -34, COL.sumi, 2); line(ctx, 2, -20, 10, -34, COL.sumi, 2);
+    } }
+  ];
+  CM.PICS = PICS;
+  var PIC_BY_ID = {};
+  (function () { var i; for (i = 0; i < PICS.length; i++) { PIC_BY_ID[PICS[i].id] = PICS[i]; } })();
+  CM.picById = function (id) { return PIC_BY_ID[id]; };
+
+  function addLeaves(s, n) {
+    var events = [], before = stageOf(s.cLeaves), after, id;
+    s.total += n; s.cLeaves += n;
+    while (s.cLeaves >= GROW[3]) {
+      id = PICS[s.cIndex % PICS.length].id;
+      s.zukan.push(id); events.push({ kind: 'adult', id: id });
+      s.cLeaves -= GROW[3]; s.cIndex += 1;
+      if (s.cIndex % PICS.length === 0) { s.lap += 1; events.push({ kind: 'lap', lap: s.lap }); }
+      before = 0;
+    }
+    after = stageOf(s.cLeaves);
+    if (after > before) { events.push({ kind: 'stage', stage: after }); }
+    return events;
+  }
+  CM.addLeaves = addLeaves;
+  var RANKS = [[0, 'もりの みならい'], [20, 'もりの なかま'], [50, 'もりの めいじん'], [100, 'もりの はかせ'], [200, 'もりの たつじん']];
+  function rankOf(total) { var i, name = RANKS[0][1]; for (i = 0; i < RANKS.length; i++) { if (total >= RANKS[i][0]) { name = RANKS[i][1]; } } return name; }
+  CM.rankOf = rankOf;
+  function nextRankAt(total) { var i; for (i = 0; i < RANKS.length; i++) { if (total < RANKS[i][0]) { return RANKS[i][0]; } } return null; }
+  CM.nextRankAt = nextRankAt;
+
+  function drawStage(ctx, size, stage, picId) {
+    var s = size / 100;
+    ctx.save(); ctx.scale(s, s); ctx.lineJoin = 'round';
+    if (stage === 0) { ellipse(ctx, 0, 2, 24, 30, COL.kami, COL.sumi, 2.5); circle(ctx, -8, -6, 4, COL.ki); circle(ctx, 9, 4, 5, COL.ki); circle(ctx, -4, 16, 3.5, COL.ki); }
+    else if (stage === 1) { circle(ctx, -24, 8, 9, COL.ki, COL.sumi, 2); circle(ctx, -10, 6, 10, COL.ki, COL.sumi, 2); circle(ctx, 5, 4, 10, COL.ki, COL.sumi, 2); circle(ctx, 22, 2, 12, COL.ki, COL.sumi, 2); circle(ctx, 26, -2, 2.2, COL.sumi); }
+    else if (stage === 2) {
+      ctx.beginPath(); ctx.moveTo(0, -34); ctx.quadraticCurveTo(26, -6, 16, 24); ctx.quadraticCurveTo(0, 40, -16, 24); ctx.quadraticCurveTo(-26, -6, 0, -34); ctx.closePath();
+      ctx.fillStyle = COL.daidai; ctx.fill(); ctx.strokeStyle = COL.sumi; ctx.lineWidth = 2.5; ctx.stroke();
+      line(ctx, -10, -4, 10, -4, COL.sumi, 2); line(ctx, -12, 8, 12, 8, COL.sumi, 2); line(ctx, -8, 20, 8, 20, COL.sumi, 2); line(ctx, 0, -34, 0, -44, COL.sumi, 3);
+    } else { PIC_BY_ID[picId].draw(ctx); }
+    ctx.restore();
+  }
+  CM.drawStage = drawStage;
+  function paintStage(canvas, stage, picId) {
+    var c = setupCanvas(canvas);
+    c.ctx.translate(c.w / 2, c.h / 2); drawStage(c.ctx, Math.min(c.w, c.h) * 0.9, stage, picId);
+  }
+  CM.paintStage = paintStage;
+
+  /* ================= 自己点検（tools/test.html から 呼ぶ） ================= */
+  CM.selfTest = function (doc) {
+    var out = [], pass = 0, fail = 0;
+    function ok(cond, label) { if (cond) { pass++; } else { fail++; out.push('FAIL ' + label); } }
+    var i, j, g, lvl, q, s, set, sigs, dup, u, canvas, ctx, k, cnt, levels, v, segs, a, b;
+
+    CM.seed(4242);
+    /* T1 点と線の きまり */
+    u = unitSegs([0, 0], [2, 0]); ok(u && u.length === 2 && segKey(u[1][0], u[1][1]) === '1,0-2,0', 'T1 よこ2＝単位2本');
+    u = unitSegs([0, 0], [2, 2]); ok(u && u.length === 2, 'T1 ななめ2＝単位2本');
+    ok(unitSegs([0, 0], [2, 1]) === null, 'T1 ななめでない線は だめ');
+    ok(segKey([1, 2], [0, 0]) === segKey([0, 0], [1, 2]), 'T1 線の むきに よらない');
+    set = makePath(5, 6, true, 2); ok(segCount(set) === 6, 'T1 6本の 線');
+    segs = setToSegs(set); ok(segSetSig(segsToSet(mapSegs(mapSegs(segs, flipX, 5), flipX, 5))) === segSetSig(set), 'T1 2回うつすと もどる');
+    ok(segSetSig(segsToSet(mapSegs(mapSegs(mapSegs(mapSegs(segs, rot90, 5), rot90, 5), rot90, 5), rot90, 5))) === segSetSig(set), 'T1 4回まわすと もどる');
+    a = perturb(set, 5); ok(a === null || (segCount(a) === segCount(set) && segSetSig(a) !== segSetSig(set)), 'T1 1本ちがい は 本数が同じで 形がちがう');
+
+    /* T2 もんだい＝全部の型・レベルで 300問ずつ＝正解が1つ・えらびしに 同じものなし */
+    for (g = 0; g < GENRES.length; g++) {
+      for (lvl = 1; lvl <= 3; lvl++) {
+        for (i = 0; i < 300; i++) {
+          q = makeQuestion(GENRES[g].id, lvl);
+          ok(q && q.g === GENRES[g].id, 'T2 ' + GENRES[g].id + ' lv' + lvl + ' 作れる');
+          if (q.kind === 'tap') {
+            ok(segCount(q.model) === TEN_LV[lvl].count, 'T2 ten 本数 lv' + lvl);
+            ok(q.modelSig === segSetSig(q.model), 'T2 ten sig');
+            continue;
+          }
+          ok(q.choices.length === 4 || (q.g === 'shiso' && q.choices.length === 3), 'T2 ' + q.g + ' えらびし 4つ lv' + lvl + ' =' + q.choices.length);
+          ok(q.answerIndex >= 0 && q.answerIndex < q.choices.length, 'T2 ' + q.g + ' 正解が ある lv' + lvl);
+          sigs = {}; dup = 0;
+          for (j = 0; j < q.choices.length; j++) {
+            if (q.g === 'kagami' || q.g === 'kasane') { s = segSetSig(q.choices[j]); }
+            else if (q.g === 'onaji') { s = gridSig(q.choices[j]); }
+            else { s = String(q.choices[j]); }
+            if (sigs[s]) { dup++; } sigs[s] = true;
+          }
+          ok(dup === 0, 'T2 ' + q.g + ' 同じ えらびし なし lv' + lvl);
+          if (q.g === 'kagami') {
+            ok(segSetSig(q.choices[q.answerIndex]) === segSetSig(segsToSet(mapSegs(setToSegs(q.model), q.axis === 'x' ? flipX : flipY, q.n))), 'T2 kagami 正解＝うつした形');
+            ok(segSetSig(q.choices[q.answerIndex]) !== segSetSig(q.model), 'T2 kagami 正解は 元と ちがう');
+            if (lvl === 1) { ok(q.axis === 'x', 'T2 kagami やさしい は かがみ だけ'); }
+          }
+          if (q.g === 'kazoe') {
+            cnt = 0; for (j = 0; j < q.items.length; j++) { if (q.items[j].kind === q.target) { cnt++; } }
+            ok(cnt === q.answer && q.choices[q.answerIndex] === cnt, 'T2 kazoe 数が あう lv' + lvl);
+            ok(q.items.length >= KAZOE_LV[lvl].total[0] && q.items.length <= KAZOE_LV[lvl].total[1], 'T2 kazoe 全部の数 lv' + lvl);
+            ok(cnt < q.items.length, 'T2 kazoe ちがう かたちも ある');
+          }
+          if (q.g === 'shiso') {
+            /* くらべの 鎖から 順が 一通りに 決まる＝order[0] は 全部の くらべで 下がった側 にしか 出ない */
+            v = q.choices[q.answerIndex];
+            if (q.ask === 'heavy') { ok(v === q.order[0], 'T2 shiso いちばん おもい'); }
+            if (q.ask === 'light') { ok(v === q.order[q.order.length - 1], 'T2 shiso いちばん かるい'); }
+            if (q.ask === 'second') { ok(v === q.order[1], 'T2 shiso 2ばんめ'); }
+            for (j = 0; j < q.pairs.length; j++) {
+              a = q.order.indexOf(q.pairs[j].left); b = q.order.indexOf(q.pairs[j].right);
+              ok((a < b) === (q.pairs[j].down === 'left'), 'T2 shiso さがる側が おもい');
+            }
+            ok(q.pairs.length === q.order.length - 1, 'T2 shiso くらべの数');
+            if (lvl === 1) { ok(q.ask === 'heavy' && q.choices.length === 3, 'T2 shiso やさしい'); }
+          }
+          if (q.g === 'tonneru') {
+            v = q.start; for (j = 0; j < q.chain.length; j++) { v += q.rules[q.chain[j]].delta; }
+            ok(v === q.answer && q.choices[q.answerIndex] === v && v >= 0 && v <= 9, 'T2 tonneru 答え lv' + lvl);
+            for (j = 0; j < q.examples.length; j++) { ok(q.examples[j].outN === q.examples[j].inN + q.rules[q.examples[j].box].delta && q.examples[j].outN >= 0 && q.examples[j].inN >= 1, 'T2 tonneru おやくそくの例'); }
+            ok(q.chain.length === TON_LV[lvl].chain, 'T2 tonneru 通る数 lv' + lvl);
+            for (j = 1; j < q.chain.length; j++) { ok(q.chain[j] !== q.chain[j - 1], 'T2 tonneru 同じトンネルが 続かない'); }
+          }
+          if (q.g === 'onaji') {
+            ok(gridSig(q.choices[q.answerIndex]) === gridSig(transformGrid(q.base, q.rot)), 'T2 onaji 正解＝まわした形');
+            ok(gridDistinctRot(q.base), 'T2 onaji 4回の回転が 全部ちがう');
+            if (lvl === 1) { ok(q.rot === 0, 'T2 onaji やさしい は まわさない'); }
+            if (lvl === 3) { ok(q.rot !== 0, 'T2 onaji むずかしい は まわす'); }
+          }
+          if (q.g === 'kasane') {
+            u = {}; for (j = 0; j < q.sheets.length; j++) { for (k in q.sheets[j]) { if (q.sheets[j].hasOwnProperty(k)) { u[k] = 1; } } }
+            ok(segSetSig(q.choices[q.answerIndex]) === segSetSig(q.union) && segCount(u) === segCount(q.union), 'T2 kasane 正解＝かさねた形');
+            ok(q.sheets.length === KASANE_LV[lvl].sheets, 'T2 kasane まいすう lv' + lvl);
+          }
+        }
+      }
+    }
+
+    /* T3 絵が ぜんぶ 描ける（例外なし） */
+    if (doc && doc.createElement) {
+      canvas = doc.createElement('canvas'); canvas.width = 200; canvas.height = 200; canvas.style.width = '200px'; canvas.style.height = '200px';
+      for (g = 0; g < GENRES.length; g++) {
+        for (lvl = 1; lvl <= 3; lvl++) {
+          q = makeQuestion(GENRES[g].id, lvl);
+          try {
+            if (q.g === 'ten') { paintDotFig(canvas, q.n, q.model, {}); }
+            if (q.g === 'kagami') { paintKagamiStem(canvas, q); paintDotFig(canvas, q.n, q.choices[0], {}); }
+            if (q.g === 'kazoe') { paintKazoe(canvas, q); }
+            if (q.g === 'shiso') { paintShiso(canvas, q); paintShape(canvas, q.choices[0]); }
+            if (q.g === 'tonneru') { paintTonneru(canvas, q); }
+            if (q.g === 'onaji') { paintGridFig(canvas, q.base, 0); paintGridFig(canvas, q.choices[0], 0); }
+            if (q.g === 'kasane') { paintKasaneStem(canvas, q); paintDotFig(canvas, q.n, q.choices[0], {}); }
+            ok(true, 'T3');
+          } catch (e) { ok(false, 'T3 ' + q.g + ' lv' + lvl + ' ' + e); }
+        }
+      }
+      ctx = canvas.getContext('2d');
+      for (i = 0; i < PICS.length; i++) { try { ctx.save(); ctx.translate(100, 100); drawStage(ctx, 100, 3, PICS[i].id); ctx.restore(); ok(true, 'T3 pic'); } catch (e2) { ok(false, 'T3 pic ' + PICS[i].id + ' ' + e2); } }
+      for (i = 0; i < 3; i++) { try { ctx.save(); ctx.translate(100, 100); drawStage(ctx, 100, i, PICS[0].id); ctx.restore(); ok(true, 'T3 stage'); } catch (e3) { ok(false, 'T3 stage ' + i + ' ' + e3); } }
+      for (i = 0; i < MARK_NAMES.length; i++) { for (j = 0; j < MARKS[MARK_NAMES[i]].period; j++) { try { ctx.save(); drawMark(ctx, MARK_NAMES[i], j, 30); ctx.restore(); ok(true, 'T3 mark'); } catch (e4) { ok(false, 'T3 mark ' + e4); } } }
+      /* T3b ますの しるし＝向きのある しるしは 画素で 見分けられる */
+      for (i = 0; i < ORIENTED.length; i++) {
+        levels = [];
+        for (j = 0; j < MARKS[ORIENTED[i]].period; j++) {
+          ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 200, 200); ctx.translate(100, 100); drawMark(ctx, ORIENTED[i], j, 120);
+          levels.push(ctx.getImageData(0, 0, 200, 200).data);
+        }
+        for (a = 0; a < levels.length; a++) { for (b = a + 1; b < levels.length; b++) { cnt = 0; for (k = 0; k < levels[a].length; k += 4) { if (Math.abs(levels[a][k] - levels[b][k]) + Math.abs(levels[a][k + 1] - levels[b][k + 1]) + Math.abs(levels[a][k + 2] - levels[b][k + 2]) > 60) { cnt++; } } ok(cnt > 200 * 200 * 0.01, 'T3b ' + ORIENTED[i] + ' 向き' + a + 'と' + b + ' の差=' + cnt); } }
+      }
+    }
+
+    /* T4 はっぱ・レベル・もんだい文 */
+    s = freshState();
+    ok(addLeaves(s, 5).length === 0 && stageOf(s.cLeaves) === 0, 'T4 5まいは たまご');
+    ok(addLeaves(s, 1)[0].kind === 'stage', 'T4 6まいで ようちゅう');
+    addLeaves(s, 18); ok(s.zukan.length === 1 && s.zukan[0] === PICS[0].id && s.cLeaves === 0, 'T4 24まいで ずかんへ');
+    ok(nextLevel(1, 4, 5) === 2 && nextLevel(3, 5, 5) === 3 && nextLevel(2, 2, 5) === 1 && nextLevel(1, 1, 5) === 1 && nextLevel(2, 3, 5) === 2, 'T4 レベルの 上げ下げ');
+    ok(rankOf(0) === 'もりの みならい' && rankOf(250) === 'もりの たつじん' && nextRankAt(0) === 20 && nextRankAt(200) === null, 'T4 かんむり');
+    for (g = 0; g < GENRES.length; g++) { q = makeQuestion(GENRES[g].id, 2); ok(questionText(q).length > 5, 'T4 もんだい文 ' + q.g); }
+    ok(uniqNums(5, 4, 1, 25).length === 4 && uniqNums(0, 4, 0, 9).indexOf(0) >= 0, 'T4 数の えらびし');
+    /* T5 おと */
+    (function () {
+      var name, seq, n, bad = 0, types = { sine: 1, square: 1, triangle: 1 }, keep = snd.ctx;
+      for (name in SOUNDS) { if (!SOUNDS.hasOwnProperty(name)) { continue; } seq = SOUNDS[name]; for (i = 0; i < seq.length; i++) { n = seq[i]; if (!NOTE[n[0]] || !(n[1] >= 0) || !(n[2] > 0) || !(n[3] > 0 && n[3] <= 1) || !types[n[4]]) { bad++; } } }
+      ok(bad === 0, 'T5 おとの ならび');
+      snd.ctx = null; ok(snd.play('ok') === false, 'T5 おとの しくみが ない ときは ならさず とまらない'); snd.ctx = keep;
+    })();
+    CM.seed(null);
+    out.unshift('PASS=' + pass + ' FAIL=' + fail);
+    return out;
+  };
+
+  global.CM = CM;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+/* ちえの もり ―― 画面（ui.js・古い Safari で動く書き方だけ） */
+(function (global) {
+  'use strict';
+  var CM = global.CM, doc = global.document;
+  var S = CM.loadState();          /* きろく */
+  var G = null;                    /* いま あそんでいる 1まわり */
+  var T = null;                    /* てんせん の 手もと */
+  var screen = 'home';
+
+  function el(id) { return doc.getElementById(id); }
+  function setText(node, text) { if (node) { node.textContent = text; } }
+  function show(id) {
+    var ids = ['scr-home', 'scr-play', 'scr-result', 'scr-zukan', 'scr-grown'], i;
+    for (i = 0; i < ids.length; i++) { el(ids[i]).style.display = (ids[i] === 'scr-' + id) ? 'block' : 'none'; }
+    screen = id;
+    if (id === 'home') { checkUpdate(); reloadIfIdle(); }
+    global.scrollTo(0, 0);
+  }
+  function on(id, fn) { var n = el(id); if (n) { n.addEventListener('click', fn, false); } }
+  function sizeCanvas(c, w, h) { c.style.width = w + 'px'; c.style.height = h + 'px'; c.setAttribute('width', String(w)); c.setAttribute('height', String(h)); }
+
+  /* ================= はじめの がめん ================= */
+  function renderHome() {
+    var who = S.name ? S.name + ' の' : '', stage = CM.stageOf(S.cLeaves), pic = CM.PICS[S.cIndex % CM.PICS.length];
+    var next = CM.nextRankAt(S.total), need = CM.GROW[3] - S.cLeaves, i, g, st, box = el('genre-list'), b;
+    setText(el('home-rank'), who + ' かんむり：' + CM.rankOf(S.total));
+    setText(el('home-leaves'), 'はっぱ ' + S.total + 'まい' + (next !== null ? '（つぎの かんむりまで あと ' + (next - S.total) + 'まい）' : '（いちばん うえ！）'));
+    setText(el('home-stage'), CM.STAGE_NAME[stage] + (stage === 3 ? '' : '（せいちゅうまで あと ' + need + 'まい）'));
+    setText(el('home-creature'), stage >= 2 ? pic.name + ' に なるかな？' : 'なにに なるかな？');
+    CM.paintStage(el('home-egg'), stage, pic.id);
+    setText(el('home-zukan-count'), 'ずかん ' + S.zukan.length + 'ひき');
+    box.innerHTML = '';
+    for (i = 0; i < CM.GENRES.length; i++) {
+      g = CM.GENRES[i]; st = S.g[g.id];
+      b = doc.createElement('button'); b.className = 'gbtn g-' + g.id; b.setAttribute('data-g', g.id);
+      b.innerHTML = '<b>' + g.name + '</b><span>' + g.sub + '</span><span class="rec">' + CM.LEVEL_NAME[st.level] + (st.rounds ? '・' + st.ok + '／' + st.q + ' せいかい' : '') + '</span>';
+      box.appendChild(b);
+    }
+    b = doc.createElement('button'); b.className = 'gbtn g-mix'; b.setAttribute('data-g', 'mix');
+    b.innerHTML = '<b>まぜまぜ</b><span>いろいろな もんだいが つぎつぎ 出る（ほんばんみたい）</span><span class="rec">' + (S.mix.rounds ? S.mix.ok + '／' + S.mix.q + ' せいかい' : '') + '</span>';
+    box.appendChild(b);
+  }
+
+  /* ================= あそぶ ================= */
+  function startRound(gid) {
+    var i, qs = [], order, lv;
+    if (gid === 'mix') {
+      order = [];
+      while (order.length < S.perRound) { order = order.concat(CM.shuffle(CM.GENRES).map ? CM.shuffle(CM.GENRES).map(function (g) { return g.id; }) : []); }
+      for (i = 0; i < S.perRound; i++) { qs.push(CM.makeQuestion(order[i], S.g[order[i]].level)); }
+    } else {
+      lv = S.g[gid].level;
+      for (i = 0; i < S.perRound; i++) { qs.push(CM.makeQuestion(gid, lv)); }
+    }
+    G = { gid: gid, qs: qs, idx: 0, ok: 0, firstOk: 0, leaves: 0, tries: 0, done: false, streak: 0 };
+    show('play');
+    renderQuestion();
+  }
+
+  function stemSize(q) {
+    if (q.g === 'tonneru') { return [440, 300]; }
+    if (q.g === 'kasane') { return [440, 190]; }
+    if (q.g === 'shiso') { return [340, 300]; }
+    if (q.g === 'kazoe') { return [320, 300]; }
+    return [270, 270];
+  }
+  function paintStem(q, canvas) {
+    if (q.g === 'ten') { CM.paintDotFig(canvas, q.n, q.model, {}); }
+    else if (q.g === 'kagami') { CM.paintKagamiStem(canvas, q); }
+    else if (q.g === 'kazoe') { CM.paintKazoe(canvas, q); }
+    else if (q.g === 'shiso') { CM.paintShiso(canvas, q); }
+    else if (q.g === 'tonneru') { CM.paintTonneru(canvas, q); }
+    else if (q.g === 'onaji') { CM.paintGridFig(canvas, q.base, 0); }
+    else if (q.g === 'kasane') { CM.paintKasaneStem(canvas, q); }
+  }
+  function paintChoice(q, i, canvas) {
+    if (q.g === 'kagami' || q.g === 'kasane') { CM.paintDotFig(canvas, q.n, q.choices[i], {}); }
+    else if (q.g === 'onaji') { CM.paintGridFig(canvas, q.choices[i], 0); }
+    else if (q.g === 'shiso') { CM.paintShape(canvas, q.choices[i]); }
+  }
+
+  function renderQuestion() {
+    var q = G.qs[G.idx], box = el('choices'), i, c, wrap, lab, g = CM.genreById(q.g), sz = stemSize(q), stem = el('q-stem');
+    G.tries = 0; G.done = false;
+    setText(el('play-genre'), g.name + '（' + CM.LEVEL_NAME[q.level] + '）');
+    setText(el('play-no'), (G.idx + 1) + ' ／ ' + G.qs.length + ' もんめ');
+    setText(el('q-text'), CM.questionText(q));
+    sizeCanvas(stem, sz[0], sz[1]);
+    el('q-stem-wrap').className = 'qstem ' + (sz[0] > sz[1] * 1.3 ? 'wide' : 'square');
+    paintStem(q, stem);
+    box.innerHTML = '';
+    el('ten-box').style.display = 'none';
+    box.style.display = '';
+    if (q.kind === 'tap') {
+      box.style.display = 'none';
+      el('ten-box').style.display = 'block';
+      T = { cur: null, set: {}, hist: [], ghost: false };
+      paintTen();
+      setText(el('msg'), 'てんを じゅんばんに タップして、ひだりと おなじ かたちに してね');
+    } else {
+      for (i = 0; i < q.choices.length; i++) {
+        wrap = doc.createElement('div'); wrap.className = 'choice' + (q.numeric ? ' choice-num' : (q.shapeChoices ? ' choice-shape' : '')); wrap.setAttribute('data-i', String(i));
+        if (q.numeric) { wrap.innerHTML = '<div class="cnum">' + q.choices[i] + '</div>'; }
+        else { c = doc.createElement('canvas'); c.className = 'cv'; sizeCanvas(c, q.shapeChoices ? 110 : 150, q.shapeChoices ? 110 : 150); wrap.appendChild(c); }
+        lab = doc.createElement('div'); lab.className = 'mark'; wrap.appendChild(lab);
+        box.appendChild(wrap);
+      }
+      paintChoices();
+      setText(el('msg'), 'どれかな？ タップしてね');
+    }
+    el('msg').className = 'msg';
+    el('next-btn').style.display = 'none';
+    CM.snd.say(CM.questionText(q));
+  }
+  function paintChoices() {
+    var q = G.qs[G.idx], nodes = el('choices').getElementsByTagName('canvas'), i;
+    for (i = 0; i < nodes.length; i++) { paintChoice(q, i, nodes[i]); }
+  }
+  function choiceNodes() { return el('choices').getElementsByClassName('choice'); }
+
+  function gotRight() {
+    var leaves = (G.tries === 0) ? 2 : 1, bonus = '';
+    G.done = true;
+    G.ok++; if (G.tries === 0) { G.firstOk++; G.streak++; } else { G.streak = 0; }
+    if (G.streak >= 3) { leaves += 1; bonus = '（3もん れんぞく！ ボーナス ＋1）'; CM.snd.play('combo'); } else { CM.snd.play(G.tries === 0 ? 'ok' : 'ok2'); }
+    G.leaves += leaves;
+    setText(el('msg'), 'せいかい！ はっぱ ' + leaves + 'まい ' + bonus);
+    el('msg').className = 'msg good';
+    el('next-btn').style.display = 'inline-block';
+  }
+  function onChoice(i) {
+    var q = G.qs[G.idx], nodes = choiceNodes(), node = nodes[i];
+    if (G.done || q.kind === 'tap') { return; }
+    if (i === q.answerIndex) {
+      node.className += ' right';
+      setText(node.getElementsByClassName('mark')[0], '✓ せいかい');
+      gotRight();
+    } else {
+      G.tries++; G.streak = 0;
+      node.className += ' wrong';
+      setText(node.getElementsByClassName('mark')[0], '！ ちがう');
+      if (G.tries === 1) {
+        CM.snd.play('oshii');
+        setText(el('msg'), 'おしい！ ' + hintText(q));
+        el('msg').className = 'msg warn';
+      } else {
+        G.done = true;
+        CM.snd.play('kotae');
+        nodes[q.answerIndex].className += ' right';
+        setText(nodes[q.answerIndex].getElementsByClassName('mark')[0], '✓ こたえ');
+        setText(el('msg'), 'こたえは これ。' + whyText(q));
+        el('msg').className = 'msg warn';
+        el('next-btn').style.display = 'inline-block';
+      }
+    }
+  }
+  /* 1回目の まちがいの あとの ことば（考え方の ヒント） */
+  function hintText(q) {
+    if (q.g === 'kagami') { return q.axis === 'x' ? 'かがみは みぎと ひだりが いれかわるよ' : 'みずうみは うえと したが いれかわるよ'; }
+    if (q.g === 'kazoe') { return 'ひだりうえから じゅんばんに、' + CM.SHAPE_NAMES[q.target] + ' だけを かぞえてね'; }
+    if (q.g === 'shiso') { return 'さがっている ほうが おもいよ。ぜんぶの シーソーを 見てね'; }
+    if (q.g === 'tonneru') { return 'おやくそくで、トンネルを とおると いくつ ふえるか へるかを たしかめてね'; }
+    if (q.g === 'onaji') { return q.rot === 0 ? 'しるしの ばしょと むきを 1つずつ くらべてね' : 'あたまの なかで まわして、しるしの ならびを くらべてね'; }
+    if (q.g === 'kasane') { return 'かみに ある せんを ぜんぶ あわせると どうなるかな'; }
+    return 'もういちど よく見てね';
+  }
+  function whyText(q) {
+    if (q.g === 'kazoe') { return CM.SHAPE_NAMES[q.target] + ' は ' + q.answer + 'こ あったよ'; }
+    if (q.g === 'tonneru') { return 'はじめ ' + q.start + 'こ → ' + q.answer + 'こ'; }
+    if (q.g === 'shiso') { return 'おもい じゅんに ' + shapeList(q.order) + ' だよ'; }
+    return 'つぎは よく見て えらんでみよう';
+  }
+  function shapeList(arr) { var i, s = []; for (i = 0; i < arr.length; i++) { s.push(CM.SHAPE_NAMES[arr[i]]); } return s.join('・'); }
+
+  /* ================= てんせん（点を タップして かく） ================= */
+  function paintTen() {
+    var q = G.qs[G.idx], canvas = el('ten-canvas'), c = CM.setupCanvas(canvas), s = Math.min(c.w, c.h), m, cur;
+    c.ctx.fillStyle = CM.COL.kami; c.ctx.fillRect(0, 0, c.w, c.h);
+    c.ctx.strokeStyle = CM.COL.sumi; c.ctx.lineWidth = 3; c.ctx.strokeRect(1.5, 1.5, c.w - 3, c.h - 3);
+    if (T.ghost) { CM.drawDots(c.ctx, q.n, s, q.model, { color: '#bcdcf5', lw: 10, dots: false }); }
+    m = CM.drawDots(c.ctx, q.n, s, T.set, { color: CM.COL.ao, dotColor: CM.COL.sumi, lw: 6 });
+    if (T.cur) {
+      cur = T.cur;
+      c.ctx.beginPath(); c.ctx.arc(m.pad + cur[0] * m.step, m.pad + cur[1] * m.step, 11, 0, Math.PI * 2);
+      c.ctx.strokeStyle = CM.COL.daidai; c.ctx.lineWidth = 4; c.ctx.stroke();
+    }
+    T.geom = m;
+  }
+  function tenTap(ev) {
+    var canvas = el('ten-canvas'), rect = canvas.getBoundingClientRect(), x, y, q = G.qs[G.idx], m = T.geom, px, py, i, j, best = null, bd = 1e9, d, segs, added = [], k, t;
+    if (G.done) { return; }
+    t = (ev.changedTouches && ev.changedTouches[0]) || ev;
+    x = t.clientX - rect.left; y = t.clientY - rect.top;
+    for (i = 0; i < q.n; i++) { for (j = 0; j < q.n; j++) { px = m.pad + i * m.step; py = m.pad + j * m.step; d = (px - x) * (px - x) + (py - y) * (py - y); if (d < bd) { bd = d; best = [i, j]; } } }
+    if (bd > (m.step * 0.45) * (m.step * 0.45)) { return; }
+    CM.snd.play('dot');
+    if (!T.cur) { T.cur = best; paintTen(); return; }
+    if (T.cur[0] === best[0] && T.cur[1] === best[1]) { return; }
+    segs = CM.unitSegs(T.cur, best);
+    if (segs === null) { setText(el('msg'), 'たて・よこ・ななめに まっすぐ つなげてね'); el('msg').className = 'msg warn'; return; }
+    for (i = 0; i < segs.length; i++) { k = CM.segKey(segs[i][0], segs[i][1]); if (!T.set[k]) { T.set[k] = segs[i]; added.push(k); } }
+    T.hist.push({ from: T.cur, keys: added });
+    T.cur = best;
+    paintTen();
+  }
+  function tenUndo() {
+    var h, i;
+    if (G.done || !T.hist.length) { if (!G.done) { T.cur = null; paintTen(); } return; }
+    h = T.hist.pop();
+    for (i = 0; i < h.keys.length; i++) { delete T.set[h.keys[i]]; }
+    T.cur = h.from; paintTen();
+  }
+  function tenClear() { if (G.done) { return; } T.set = {}; T.hist = []; T.cur = null; paintTen(); }
+  function tenLift() { if (G.done) { return; } T.cur = null; paintTen(); }
+  function tenCheck() {
+    var q = G.qs[G.idx], sig = CM.segSetSig(T.set), n = 0, k;
+    if (G.done) { return; }
+    for (k in T.set) { if (T.set.hasOwnProperty(k)) { n++; } }
+    if (n === 0) { setText(el('msg'), 'まだ なにも かいていないよ'); el('msg').className = 'msg warn'; return; }
+    if (sig === q.modelSig) { T.cur = null; paintTen(); gotRight(); return; }
+    G.tries++; G.streak = 0;
+    if (G.tries === 1) {
+      CM.snd.play('oshii');
+      T.ghost = true; paintTen();
+      setText(el('msg'), 'おしい！ うすい いろが おてほん。ちがう ところを なおしてね');
+      el('msg').className = 'msg warn';
+    } else {
+      G.done = true; CM.snd.play('kotae');
+      T.set = {}; T.cur = null; T.ghost = false;
+      for (k in q.model) { if (q.model.hasOwnProperty(k)) { T.set[k] = q.model[k]; } }
+      paintTen();
+      setText(el('msg'), 'こたえは これ。はじめの てんの ばしょを よく見てね');
+      el('msg').className = 'msg warn';
+      el('next-btn').style.display = 'inline-block';
+    }
+  }
+
+  function onNext() {
+    G.idx++;
+    if (G.idx >= G.qs.length) { finishRound(); return; }
+    renderQuestion();
+  }
+
+  function finishRound() {
+    var events, i, lines = [], stars = '', adultId = null, st, newLv, gname;
+    if (G.gid === 'mix') { st = S.mix; gname = 'まぜまぜ'; }
+    else { st = S.g[G.gid]; gname = CM.genreById(G.gid).name; }
+    st.rounds++; st.q += G.qs.length; st.ok += G.ok;
+    if (G.gid !== 'mix') {
+      newLv = CM.nextLevel(st.level, G.firstOk, G.qs.length);
+      if (newLv > st.level) { lines.push(gname + ' が「' + CM.LEVEL_NAME[newLv] + '」に あがった！'); }
+      if (newLv < st.level) { lines.push('つぎは「' + CM.LEVEL_NAME[newLv] + '」で れんしゅう'); }
+      st.level = newLv;
+    }
+    events = CM.addLeaves(S, G.leaves);
+    CM.saveState(S);
+    for (i = 0; i < G.qs.length; i++) { stars += (i < G.firstOk) ? '★' : (i < G.ok ? '☆' : '・'); }
+    setText(el('res-title'), G.ok === G.qs.length ? 'ぜんぶ せいかい！' : 'おつかれさま！');
+    setText(el('res-score'), gname + '：' + G.qs.length + 'もんちゅう ' + G.ok + 'もん せいかい');
+    setText(el('res-stars'), stars);
+    setText(el('res-leaves'), 'はっぱ ＋' + G.leaves + 'まい（ぜんぶで ' + S.total + 'まい）');
+    for (i = 0; i < events.length; i++) {
+      if (events[i].kind === 'stage') { lines.push(CM.STAGE_NAME[events[i].stage] + ' に なった！'); }
+      if (events[i].kind === 'adult') { adultId = events[i].id; lines.push(CM.picById(events[i].id).name + ' が うまれた！ ずかんに はいったよ'); }
+      if (events[i].kind === 'lap') { lines.push('ぜんぶの いきものが そろった！ ' + events[i].lap + 'しゅうめ'); }
+    }
+    CM.snd.play(G.ok === G.qs.length ? 'perfect' : 'round');
+    if (adultId || events.length) { CM.snd.play('grow', G.ok === G.qs.length ? 1.5 : 1.1); }
+    if (lines.length === 0) { lines.push(CM.STAGE_NAME[CM.stageOf(S.cLeaves)] + ' が そだっているよ（せいちゅうまで あと ' + (CM.GROW[3] - S.cLeaves) + 'まい）'); }
+    setText(el('res-events'), lines.join(' ／ '));
+    if (adultId) { CM.paintStage(el('res-egg'), 3, adultId); }
+    else { CM.paintStage(el('res-egg'), CM.stageOf(S.cLeaves), CM.PICS[S.cIndex % CM.PICS.length].id); }
+    show('result');
+  }
+
+  /* ================= ずかん ================= */
+  function renderZukan() {
+    var box = el('zukan-list'), i, pic, card, c, got, cv;
+    box.innerHTML = '';
+    for (i = 0; i < CM.PICS.length; i++) {
+      pic = CM.PICS[i];
+      got = 0; for (c = 0; c < S.zukan.length; c++) { if (S.zukan[c] === pic.id) { got++; } }
+      card = doc.createElement('div'); card.className = 'zcard' + (got ? '' : ' none');
+      cv = doc.createElement('canvas'); sizeCanvas(cv, 120, 120); card.appendChild(cv);
+      card.appendChild(doc.createElement('div')).textContent = got ? pic.name + (got > 1 ? ' ×' + got : '') : '？？？';
+      box.appendChild(card);
+      CM.paintStage(cv, got ? 3 : 0, pic.id);
+    }
+  }
+
+  /* ================= おとなのひと ================= */
+  function renderGrown() {
+    var t = el('grown-table'), i, rows = '', g, st;
+    el('grown-name').value = S.name || '';
+    el('grown-per').value = String(S.perRound);
+    el('grown-snd').value = (S.sound === false) ? 'off' : 'on';
+    el('grown-voice').value = (S.voice === false) ? 'off' : 'on';
+    for (i = 0; i < CM.GENRES.length; i++) {
+      g = CM.GENRES[i]; st = S.g[g.id];
+      rows += '<tr><td>' + g.name + '</td><td>' + CM.LEVEL_NAME[st.level] + '</td><td>' + st.rounds + '</td><td>' + st.q + '</td><td>' + st.ok + '</td></tr>';
+    }
+    rows += '<tr><td>まぜまぜ</td><td>−</td><td>' + S.mix.rounds + '</td><td>' + S.mix.q + '</td><td>' + S.mix.ok + '</td></tr>';
+    t.innerHTML = '<tr><th>もんだい</th><th>レベル</th><th>まわり</th><th>もんだい</th><th>せいかい</th></tr>' + rows;
+    setText(el('grown-ver'), 'はんすう ' + CM.APP_VERSION + '・はっぱ ' + S.total + '・ずかん ' + S.zukan.length);
+    el('reset-2').style.display = 'none';
+  }
+  var holdTimer = null;
+  function holdStart() { holdTimer = global.setTimeout(function () { holdTimer = null; renderGrown(); show('grown'); }, 1200); }
+  function holdEnd() { if (holdTimer) { global.clearTimeout(holdTimer); holdTimer = null; } }
+
+  /* ================= 版の 取りなおし（くるくる ずけい と同型） ================= */
+  var UPD_KEY = 'chie_upd';
+  function tidyUrl() {
+    if (!global.history || !global.history.replaceState) { return; }
+    if (global.location.search.indexOf('v=') < 0) { return; }
+    try { global.history.replaceState(null, '', global.location.pathname); } catch (e) { /* 見ためだけ */ }
+  }
+  function checkUpdate() {
+    var x;
+    if (!global.XMLHttpRequest) { return; }
+    try { x = new global.XMLHttpRequest(); } catch (e) { return; }
+    try { x.open('GET', 'version.txt?t=' + (new Date()).getTime(), true); } catch (e2) { return; }
+    x.onreadystatechange = function () {
+      var v, now, last = null, part;
+      if (x.readyState !== 4 || x.status !== 200) { return; }
+      v = parseInt(String(x.responseText).replace(/[^0-9]/g, ''), 10);
+      now = (new Date()).getTime();
+      if (!(v > CM.APP_VERSION)) { return; }
+      try { last = global.sessionStorage.getItem(UPD_KEY); } catch (e3) { /* 無くても進む */ }
+      if (last) { part = String(last).split(':'); if (part[0] === String(v) && (now - parseInt(part[1], 10)) < 30000) { return; } }
+      if (screen !== 'home') { return; }
+      try { global.sessionStorage.setItem(UPD_KEY, v + ':' + now); } catch (e4) { /* 無くても進む */ }
+      global.location.replace('./?v=' + v);
+    };
+    try { x.send(null); } catch (e5) { /* 通信できなくても あそべる */ }
+  }
+  var cacheReady = false;
+  function reloadIfIdle() { if (!cacheReady || screen !== 'home') { return; } cacheReady = false; global.location.reload(); }
+  function watchCache() {
+    var ac = global.applicationCache;
+    if (!ac || !ac.addEventListener) { return; }
+    ac.addEventListener('updateready', function () { try { ac.swapCache(); } catch (e) { /* つぎに */ } cacheReady = true; reloadIfIdle(); }, false);
+  }
+
+  /* ================= 押したときの 受けとり ================= */
+  function init() {
+    var gb = el('grown-btn'), tc = el('ten-canvas'), touched = false;
+    el('genre-list').addEventListener('click', function (ev) {
+      var t = ev.target, n = 0;
+      while (t && n < 4) { if (t.getAttribute && t.getAttribute('data-g')) { startRound(t.getAttribute('data-g')); return; } t = t.parentNode; n++; }
+    }, false);
+    on('zukan-btn', function () { renderZukan(); show('zukan'); });
+    on('zukan-back', function () { renderHome(); show('home'); });
+    on('play-back', function () { try { global.speechSynthesis && global.speechSynthesis.cancel(); } catch (e) { /* なくても */ } renderHome(); show('home'); });
+    on('next-btn', onNext);
+    on('say-btn', function () { CM.snd.say(CM.questionText(G.qs[G.idx])); });
+    on('res-again', function () { startRound(G.gid); });
+    on('res-home', function () { renderHome(); show('home'); });
+    on('ten-undo', tenUndo); on('ten-clear', tenClear); on('ten-lift', tenLift); on('ten-check', tenCheck);
+    el('choices').addEventListener('click', function (ev) {
+      var t = ev.target, n = 0;
+      while (t && n < 5) { if (t.getAttribute && t.getAttribute('data-i') !== null) { onChoice(parseInt(t.getAttribute('data-i'), 10)); return; } t = t.parentNode; n++; }
+    }, false);
+    /* てんせん＝ゆびで さわった ところを すぐ 受ける（クリックより はやい）。両方 来たら 1回だけ */
+    tc.addEventListener('touchstart', function (ev) { ev.preventDefault(); touched = true; tenTap(ev); }, false);
+    tc.addEventListener('mousedown', function (ev) { if (touched) { touched = false; return; } tenTap(ev); }, false);
+    gb.addEventListener('touchstart', function (ev) { ev.preventDefault(); holdStart(); }, false);
+    gb.addEventListener('touchend', holdEnd, false); gb.addEventListener('touchcancel', holdEnd, false);
+    gb.addEventListener('mousedown', holdStart, false); gb.addEventListener('mouseup', holdEnd, false); gb.addEventListener('mouseleave', holdEnd, false);
+    on('grown-back', function () { renderHome(); show('home'); });
+    on('grown-save', function () {
+      S.name = String(el('grown-name').value || '').slice(0, 8);
+      S.perRound = parseInt(el('grown-per').value, 10) === 10 ? 10 : 5;
+      S.sound = el('grown-snd').value !== 'off'; S.voice = el('grown-voice').value !== 'off';
+      CM.snd.on = S.sound; CM.snd.voice = S.voice;
+      CM.saveState(S); renderHome(); show('home');
+    });
+    on('reset-1', function () { el('reset-2').style.display = 'inline-block'; });
+    on('reset-2', function () {
+      var keep = { name: S.name, perRound: S.perRound, sound: S.sound, voice: S.voice };
+      S = CM.freshState(); S.name = keep.name; S.perRound = keep.perRound; S.sound = keep.sound; S.voice = keep.voice;
+      CM.saveState(S); renderGrown(); setText(el('grown-ver'), 'きろくを けしました');
+    });
+    global.addEventListener('resize', function () {
+      if (screen === 'play' && G) { paintStem(G.qs[G.idx], el('q-stem')); paintChoices(); if (T && G.qs[G.idx].kind === 'tap') { paintTen(); } }
+      if (screen === 'home') { renderHome(); }
+    }, false);
+    CM.snd.on = (S.sound !== false); CM.snd.voice = (S.voice !== false);
+    doc.addEventListener('touchend', function () { CM.snd.unlock(); }, false);
+    doc.addEventListener('click', function (ev) { CM.snd.unlock(); if (ev.target && ev.target.tagName === 'BUTTON') { CM.snd.play('tap'); } }, false);
+    tidyUrl();
+    watchCache();
+    renderHome();
+    show('home');
+  }
+  /* 試験用＝画面を 直接 うごかす 入口 */
+  CM.ui = { startRound: startRound, tenTap: tenTap, tenCheck: tenCheck, state: function () { return S; }, round: function () { return G; }, ten: function () { return T; } };
+
+  if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', init, false); } else { init(); }
+})(window);
+</script>
+</body>
+</html>
