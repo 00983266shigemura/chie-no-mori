@@ -51,13 +51,19 @@ def main():
     icon = os.path.join(ROOT, 'icon.png')
     if not os.path.exists(icon):
         sys.exit('✕ icon.png がありません（python3 tools/make_icon.py で作る）')
+    imgdir = os.path.join(ROOT, 'img')
+    imgs = sorted(f for f in os.listdir(imgdir) if f.endswith('.png')) if os.path.isdir(imgdir) else []
+    # 絵は 66枚そろっていること（1枚でも欠けると 問題が作れない）
+    if len(imgs) != 66:
+        sys.exit('✕ img/ の絵が 66枚ではありません（%d枚）' % len(imgs))
     manifest = (
         'CACHE MANIFEST\n'
         '# ちえの もり はんすう %d\n'
         '# index.html md5 %s\n'
         '# icon.png md5 %s\n'
-        '\nCACHE:\n./\nindex.html\nicon.png\n\nNETWORK:\n*\n'
-    ) % (ver, md5(out), md5(icon))
+        '# img %d files md5 %s\n'
+        '\nCACHE:\n./\nindex.html\nicon.png\n%s\n\nNETWORK:\n*\n'
+    ) % (ver, md5(out), md5(icon), len(imgs), hashlib.md5(''.join(md5(os.path.join(imgdir, f)) for f in imgs).encode('utf-8')).hexdigest(), '\n'.join('img/' + f for f in imgs))
     with io.open(os.path.join(ROOT, 'offline.appcache'), 'w', encoding='utf-8', newline='\n') as fp:
         fp.write(manifest)
     print('できました ＝ index.html（%d バイト・はんすう %d・md5 %s）・offline.appcache' % (os.path.getsize(out), ver, md5(out)))

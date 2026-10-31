@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 4;
+  CM.APP_VERSION = 5;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
@@ -409,6 +409,214 @@
   }
 
   /* ================= もんだいの 入口 ================= */
+  /* ================= え の もんだい（きせつ・なかま／ことば／おはなし）＝絵 66枚（img/<id>.png） =================
+     m＝音（しりとり・おとの かず に つかう）。ふつうの 1音は 1文字。「ちゅ」「ぎょ」「しゃ」「ー」「っ」は 数え方が ゆれるので、しりとり・音数には つかわない */
+  var ITEMS = [
+    { id: 'sakura', name: 'さくら', m: ['さ', 'く', 'ら'], season: 'haru' },
+    { id: 'tulip', name: 'ちゅーりっぷ', m: ['ちゅ', 'ー', 'り', 'っ', 'ぷ'], season: 'haru' },
+    { id: 'koinobori', name: 'こいのぼり', m: ['こ', 'い', 'の', 'ぼ', 'り'], season: 'haru' },
+    { id: 'tanpopo', name: 'たんぽぽ', m: ['た', 'ん', 'ぽ', 'ぽ'], season: 'haru' },
+    { id: 'ichigo', name: 'いちご', m: ['い', 'ち', 'ご'], season: 'haru', food: true },
+    { id: 'hinamatsuri', name: 'ひなにんぎょう', m: ['ひ', 'な', 'に', 'ん', 'ぎょ', 'う'], season: 'haru' },
+    { id: 'suika', name: 'すいか', m: ['す', 'い', 'か'], season: 'natsu', food: true },
+    { id: 'himawari', name: 'ひまわり', m: ['ひ', 'ま', 'わ', 'り'], season: 'natsu' },
+    { id: 'semi', name: 'せみ', m: ['せ', 'み'], season: 'natsu', animal: true },
+    { id: 'asagao', name: 'あさがお', m: ['あ', 'さ', 'が', 'お'], season: 'natsu' },
+    { id: 'kakigori', name: 'かきごおり', m: ['か', 'き', 'ご', 'お', 'り'], season: 'natsu', food: true },
+    { id: 'tanabata', name: 'たなばた', m: ['た', 'な', 'ば', 'た'], season: 'natsu' },
+    { id: 'kaki', name: 'かき', m: ['か', 'き'], season: 'aki', food: true },
+    { id: 'kuri', name: 'くり', m: ['く', 'り'], season: 'aki', food: true },
+    { id: 'momiji', name: 'もみじ', m: ['も', 'み', 'じ'], season: 'aki' },
+    { id: 'tonbo', name: 'とんぼ', m: ['と', 'ん', 'ぼ'], season: 'aki', animal: true },
+    { id: 'otsukimi', name: 'おつきみ', m: ['お', 'つ', 'き', 'み'], season: 'aki' },
+    { id: 'kosumosu', name: 'こすもす', m: ['こ', 'す', 'も', 'す'], season: 'aki' },
+    { id: 'yukidaruma', name: 'ゆきだるま', m: ['ゆ', 'き', 'だ', 'る', 'ま'], season: 'fuyu' },
+    { id: 'mikan', name: 'みかん', m: ['み', 'か', 'ん'], season: 'fuyu', food: true },
+    { id: 'tsubaki', name: 'つばき', m: ['つ', 'ば', 'き'], season: 'fuyu' },
+    { id: 'kagamimochi', name: 'かがみもち', m: ['か', 'が', 'み', 'も', 'ち'], season: 'fuyu' },
+    { id: 'setsubun', name: 'せつぶん', m: ['せ', 'つ', 'ぶ', 'ん'], season: 'fuyu' },
+    { id: 'christmas_tree', name: 'くりすますつりー', m: ['く', 'り', 'す', 'ま', 'す', 'つ', 'り', 'ー'], season: 'fuyu' },
+    { id: 'hato', name: 'はと', m: ['は', 'と'], cat: 'tori', animal: true },
+    { id: 'karasu', name: 'からす', m: ['か', 'ら', 'す'], cat: 'tori', animal: true },
+    { id: 'suzume', name: 'すずめ', m: ['す', 'ず', 'め'], cat: 'tori', animal: true },
+    { id: 'kabutomushi', name: 'かぶとむし', m: ['か', 'ぶ', 'と', 'む', 'し'], cat: 'mushi', animal: true },
+    { id: 'tentoumushi', name: 'てんとうむし', m: ['て', 'ん', 'と', 'う', 'む', 'し'], cat: 'mushi', animal: true },
+    { id: 'kamakiri', name: 'かまきり', m: ['か', 'ま', 'き', 'り'], cat: 'mushi', animal: true },
+    { id: 'tai', name: 'たい', m: ['た', 'い'], cat: 'sakana', animal: true },
+    { id: 'kingyo', name: 'きんぎょ', m: ['き', 'ん', 'ぎょ'], cat: 'sakana', animal: true },
+    { id: 'unagi', name: 'うなぎ', m: ['う', 'な', 'ぎ'], cat: 'sakana', animal: true },
+    { id: 'tokage', name: 'とかげ', m: ['と', 'か', 'げ'], cat: 'hachu', animal: true },
+    { id: 'kaeru', name: 'かえる', m: ['か', 'え', 'る'], cat: 'hachu', animal: true },
+    { id: 'kame', name: 'かめ', m: ['か', 'め'], cat: 'hachu', animal: true },
+    { id: 'inu', name: 'いぬ', m: ['い', 'ぬ'], cat: 'kemono', animal: true },
+    { id: 'saru', name: 'さる', m: ['さ', 'る'], cat: 'kemono', animal: true },
+    { id: 'zou', name: 'ぞう', m: ['ぞ', 'う'], cat: 'kemono', animal: true },
+    { id: 'densha', name: 'でんしゃ', m: ['で', 'ん', 'しゃ'], cat: 'norimono', ride: true },
+    { id: 'jitensha', name: 'じてんしゃ', m: ['じ', 'て', 'ん', 'しゃ'], cat: 'norimono', ride: true },
+    { id: 'kuruma', name: 'くるま', m: ['く', 'る', 'ま'], cat: 'norimono', ride: true },
+    { id: 'ringo', name: 'りんご', m: ['り', 'ん', 'ご'], food: true },
+    { id: 'gorira', name: 'ごりら', m: ['ご', 'り', 'ら'], animal: true },
+    { id: 'rappa', name: 'らっぱ', m: ['ら', 'っ', 'ぱ'], carry: true },
+    { id: 'panda', name: 'ぱんだ', m: ['ぱ', 'ん', 'だ'], animal: true },
+    { id: 'daikon', name: 'だいこん', m: ['だ', 'い', 'こ', 'ん'], food: true },
+    { id: 'nezumi', name: 'ねずみ', m: ['ね', 'ず', 'み'], animal: true },
+    { id: 'enpitsu', name: 'えんぴつ', m: ['え', 'ん', 'ぴ', 'つ'], carry: true },
+    { id: 'hon', name: 'ほん', m: ['ほ', 'ん'], carry: true },
+    { id: 'kasa', name: 'かさ', m: ['か', 'さ'], carry: true },
+    { id: 'tsukue', name: 'つくえ', m: ['つ', 'く', 'え'] },
+    { id: 'neko', name: 'ねこ', m: ['ね', 'こ'], animal: true },
+    { id: 'kutsu', name: 'くつ', m: ['く', 'つ'], carry: true },
+    { id: 'ki', name: 'き', m: ['き'] },
+    { id: 'hana', name: 'はな', m: ['は', 'な'] },
+    { id: 'tsumiki', name: 'つみき', m: ['つ', 'み', 'き'], carry: true },
+    { id: 'boushi', name: 'ぼうし', m: ['ぼ', 'う', 'し'], carry: true },
+    { id: 'tokei', name: 'とけい', m: ['と', 'け', 'い'], carry: true },
+    { id: 'isu', name: 'いす', m: ['い', 'す'] },
+    { id: 'uchiwa', name: 'うちわ', m: ['う', 'ち', 'わ'], carry: true },
+    { id: 'kuma', name: 'くま', m: ['く', 'ま'], animal: true },
+    { id: 'banana', name: 'ばなな', m: ['ば', 'な', 'な'], food: true },
+    { id: 'terebi', name: 'てれび', m: ['て', 'れ', 'び'] },
+    { id: 'hasami', name: 'はさみ', m: ['は', 'さ', 'み'], carry: true },
+    { id: 'basu', name: 'ばす', m: ['ば', 'す'], ride: true }
+  ];
+  CM.ITEMS = ITEMS;
+  var ITEM_BY_ID = {};
+  (function () { var i; for (i = 0; i < ITEMS.length; i++) { ITEM_BY_ID[ITEMS[i].id] = ITEMS[i]; } })();
+  CM.itemById = function (id) { return ITEM_BY_ID[id]; };
+  var SEASON_NAME = { haru: 'はる', natsu: 'なつ', aki: 'あき', fuyu: 'ふゆ' };
+  var CAT_NAME = { tori: 'とり', mushi: 'むし', sakana: 'さかな', hachu: 'かえるや かめの なかま', kemono: 'けもの', norimono: 'のりもの' };
+  CM.SEASON_NAME = SEASON_NAME; CM.CAT_NAME = CAT_NAME;
+  var SEASONS = ['haru', 'natsu', 'aki', 'fuyu'], CATS = ['tori', 'mushi', 'sakana', 'hachu', 'kemono', 'norimono'];
+  var EASY_SEASON = { sakura: 1, tulip: 1, koinobori: 1, ichigo: 1, hinamatsuri: 1, suika: 1, himawari: 1, semi: 1, kakigori: 1, kaki: 1, kuri: 1, momiji: 1, tonbo: 1, yukidaruma: 1, mikan: 1, christmas_tree: 1, kagamimochi: 1 };
+  function itemsWhere(fn) { var i, out = []; for (i = 0; i < ITEMS.length; i++) { if (fn(ITEMS[i])) { out.push(ITEMS[i]); } } return out; }
+  function idsOf(arr) { var i, out = []; for (i = 0; i < arr.length; i++) { out.push(arr[i].id); } return out; }
+  function plainMora(s) { return s.length === 1 && s !== 'ん' && s !== 'ー' && s !== 'っ'; }
+  function firstMora(it) { return it.m[0]; }
+  function lastMora(it) { return it.m[it.m.length - 1]; }
+  function plainWord(it) { var i; for (i = 0; i < it.m.length; i++) { if (!plainMora(it.m[i]) && it.m[i] !== 'ん') { return false; } } return true; }   /* 「ん」は まんなかに あってよい */
+  function finishChoose(q, answer, others) {
+    var ch = shuffle([answer].concat(others)), i;
+    q.choices = idsOf(ch); q.answerIndex = -1;
+    for (i = 0; i < ch.length; i++) { if (ch[i].id === answer.id) { q.answerIndex = i; } }
+    q.kind = 'choose'; q.imgChoices = true;
+    return q;
+  }
+  /* きせつ・なかま＝ひだりの 絵と おなじ きせつ（なかま）の 絵を えらぶ。まちがいは べつの きせつ（なかま）から 1つずつ */
+  function makeKisetsu(level) {
+    var sub, stem, answer, others, pool, keys, k, i, q;
+    sub = (level === 1) ? 'season' : (level === 2 ? (rnd() < 0.5 ? 'season' : 'nakama') : (rnd() < 0.4 ? 'season' : 'nakama'));
+    if (sub === 'season') {
+      pool = itemsWhere(function (it) { return !!it.season && (level > 1 || EASY_SEASON[it.id]); });
+      stem = pick(pool);
+      answer = pick(itemsWhere(function (it) { return it.season === stem.season && it.id !== stem.id && (level > 1 || EASY_SEASON[it.id]); }));
+      keys = shuffle(SEASONS.slice()); others = [];
+      for (i = 0; i < keys.length; i++) { k = keys[i]; if (k !== stem.season && others.length < 3) { others.push(pick(itemsWhere(function (it) { return it.season === k; }))); } }
+      q = { g: 'kisetsu', level: level, sub: 'season', stem: stem.id, key: stem.season };
+    } else {
+      stem = pick(itemsWhere(function (it) { return !!it.cat; }));
+      answer = pick(itemsWhere(function (it) { return it.cat === stem.cat && it.id !== stem.id; }));
+      keys = shuffle(CATS.slice()); others = [];
+      for (i = 0; i < keys.length; i++) { k = keys[i]; if (k !== stem.cat && others.length < 3) { others.push(pick(itemsWhere(function (it) { return it.cat === k; }))); } }
+      q = { g: 'kisetsu', level: level, sub: 'nakama', stem: stem.id, key: stem.cat };
+    }
+    q.imgStem = true;
+    return finishChoose(q, answer, others);
+  }
+  /* ことば＝1 はじめの おと／2 しりとり／3 おとの かず・おわりの おと */
+  function makeKotoba(level) {
+    var sub, words, target, others, q, chain, c1, c2, last, cands, i, nums, n, tries;
+    words = itemsWhere(function (it) { return plainWord(it) && plainMora(firstMora(it)); });
+    sub = (level === 1) ? 'hajime' : (level === 2 ? 'shiritori' : (rnd() < 0.5 ? 'onsu' : 'owari'));
+    if (sub === 'hajime' || sub === 'owari') {
+      target = pick(itemsWhere(function (it) { return plainMora(firstMora(it)) && (sub === 'hajime' || plainMora(lastMora(it))); }));
+      others = shuffle(itemsWhere(function (it) {
+        return it.id !== target.id && (sub === 'hajime' ? firstMora(it) !== firstMora(target) : lastMora(it) !== lastMora(target));
+      })).slice(0, 3);
+      q = { g: 'kotoba', level: level, sub: sub, sound: sub === 'hajime' ? firstMora(target) : lastMora(target), target: target.id };
+      return finishChoose(q, target, others);
+    }
+    if (sub === 'onsu') {
+      target = pick(words);
+      n = target.m.length;
+      nums = uniqNums(n, 4, 1, 7);
+      return { g: 'kotoba', level: level, sub: 'onsu', target: target.id, answer: n, choices: nums, answerIndex: -1, kind: 'choose', numeric: true, imgStem: true, stem: target.id };
+    }
+    /* しりとり＝c1 → c2 → ？（c2 の さいごの おとで はじまる ものを えらぶ） */
+    for (tries = 0; tries < 60; tries++) {
+      c1 = pick(itemsWhere(function (it) { return plainMora(lastMora(it)) && plainMora(firstMora(it)); }));
+      cands = itemsWhere(function (it) { return it.id !== c1.id && firstMora(it) === lastMora(c1) && plainMora(lastMora(it)); });
+      if (!cands.length) { continue; }
+      c2 = pick(cands);
+      last = lastMora(c2);
+      cands = itemsWhere(function (it) { return it.id !== c1.id && it.id !== c2.id && firstMora(it) === last; });
+      if (!cands.length) { continue; }
+      target = pick(cands);
+      others = shuffle(itemsWhere(function (it) { return it.id !== c1.id && it.id !== c2.id && it.id !== target.id && firstMora(it) !== last; })).slice(0, 3);
+      chain = [c1.id, c2.id];
+      q = { g: 'kotoba', level: level, sub: 'shiritori', chain: chain, sound: last, target: target.id, imgStem: true };
+      return finishChoose(q, target, others);
+    }
+    return null;
+  }
+  /* おはなし＝みじかい おはなしを きいて（よんで）、あとから 2〜4問。いちばん上は「いれなかった もの」の ひっかけ */
+  var STORY_NAMES = ['たろうくん', 'はなちゃん', 'けんくん', 'ももちゃん'];
+  function makeOhanashi(level) {
+    var name = pick(STORY_NAMES), rides, ride, carries, c1, c2, nc, animals, a, foods, f, sitems, si, story, parts = [], others, q, ans, i, seasonAns, keys, k;
+    rides = itemsWhere(function (it) { return !!it.ride; }); ride = pick(rides);
+    carries = shuffle(itemsWhere(function (it) { return !!it.carry; })); c1 = carries[0]; c2 = carries[1]; nc = carries[2];
+    animals = itemsWhere(function (it) { return !!it.animal; }); a = pick(animals);
+    foods = itemsWhere(function (it) { return !!it.food; }); f = pick(foods);
+    sitems = itemsWhere(function (it) { return !!it.season && !it.animal && !it.food; }); si = pick(sitems);
+    story = 'きょうは ' + name + ' が ' + ride.name + ' に のって、おばあちゃんの いえに いきます。';
+    if (level >= 2) { story += 'かばんに ' + c1.name + ' と ' + c2.name + ' を いれました。'; }
+    if (level >= 3) { story += nc.name + ' は いれませんでした。'; }
+    story += 'えきで ' + a.name + ' を みました。おひるに ' + f.name + ' を たべました。';
+    if (level >= 3) { story += 'おばあちゃんの いえには ' + si.name + ' が ありました。'; }
+    function part(ask, answer, pool, extra) {
+      var os = shuffle(itemsWhere(function (it) { return pool(it) && it.id !== answer.id && (!extra || it.id !== extra.id) && story.indexOf(it.name) < 0; })).slice(0, extra ? 2 : 3);   /* まちがいは おはなしに 出てこない もの（なまえの 一部が かぶる ものも 外す） */
+      if (extra) { os.push(extra); }
+      return finishChoose({ g: 'ohanashi', level: level, ask: ask, why: '' }, answer, os);
+    }
+    if (level >= 2) {
+      parts.push(part('かばんに いれた ものは どれ？', rnd() < 0.5 ? c1 : c2, function (it) { return !!it.carry && it.id !== c1.id && it.id !== c2.id; }, level >= 3 ? nc : null));
+      parts[parts.length - 1].why = 'かばんに いれたのは ' + c1.name + ' と ' + c2.name;
+    }
+    parts.push(part('えきで みた いきものは どれ？', a, function (it) { return !!it.animal; }, null));
+    parts[parts.length - 1].why = 'えきで みたのは ' + a.name;
+    parts.push(part('おひるに たべた ものは どれ？', f, function (it) { return !!it.food; }, null));
+    parts[parts.length - 1].why = 'たべたのは ' + f.name;
+    if (level === 1 || level === 3) {
+      parts.push(part(name + ' が のった のりものは どれ？', ride, function (it) { return !!it.ride; }, null));
+      parts[parts.length - 1].why = 'のったのは ' + ride.name;
+    }
+    if (level >= 3) {
+      seasonAns = pick(itemsWhere(function (it) { return it.season === si.season && it.id !== si.id; }));
+      keys = shuffle(SEASONS.slice()); others = [];
+      for (i = 0; i < keys.length; i++) { k = keys[i]; if (k !== si.season && others.length < 3) { others.push(pick(itemsWhere(function (it) { return it.season === k; }))); } }
+      q = finishChoose({ g: 'ohanashi', level: level, ask: 'おはなしの きせつと おなじ ものは どれ？', why: si.name + ' は ' + SEASON_NAME[si.season] + ' の もの' }, seasonAns, others);
+      parts.push(q);
+    }
+    if (level === 1) { parts = shuffle(parts).slice(0, 2); }
+    for (i = 0; i < parts.length; i++) { parts[i].partIdx = i; parts[i].storyText = story; parts[i].nParts = parts.length; }
+    ans = parts[0]; ans.parts = parts;
+    return ans;
+  }
+  CM.makeOhanashi = makeOhanashi;
+  CM.makeKisetsu = makeKisetsu; CM.makeKotoba = makeKotoba;
+
+  /* ================= 制限時間（秒）＝過去問の〈時間〉を 1問あたりに ならした値（解答解説編・2022〜2025年度）
+     てんせん＝模写 2〜5分/枚 → やさしい 90・ふつう 75・むずかしい 60
+     かがみ・おなじ・かさねる＝図形 1分/4問前後 → 45・35・30    かぞえる＝数量 1〜2分/数問 → 45・35・30
+     シーソー＝推理 各15秒 → 30・20・15    トンネル＝1分/数問 → 45・35・30
+     きせつ・なかま＝常識 30〜80秒/数問 → 30・25・20    ことば＝言語 1〜2分/数問 → 40・30・30    おはなし＝各10〜30秒 → 30・25・20 */
+  var TIME_SEC = {
+    ten: { 1: 90, 2: 75, 3: 60 }, kagami: { 1: 45, 2: 35, 3: 30 }, kazoe: { 1: 45, 2: 35, 3: 30 }, shiso: { 1: 30, 2: 20, 3: 15 },
+    tonneru: { 1: 45, 2: 35, 3: 30 }, onaji: { 1: 45, 2: 35, 3: 30 }, kasane: { 1: 45, 2: 35, 3: 30 },
+    kisetsu: { 1: 30, 2: 25, 3: 20 }, kotoba: { 1: 40, 2: 30, 3: 30 }, ohanashi: { 1: 30, 2: 25, 3: 20 }
+  };
+  CM.TIME_SEC = TIME_SEC;
+  CM.timeFor = function (q) { var t = TIME_SEC[q.g]; return (t && t[q.level]) ? t[q.level] : 30; };
+
   var GENRES = [
     { id: 'ten', name: 'てんせん', sub: 'おなじ かたちを てんで かく', make: makeTen },
     { id: 'kagami', name: 'かがみ', sub: 'かがみに うつすと どれ？', make: makeKagami },
@@ -416,7 +624,10 @@
     { id: 'shiso', name: 'シーソー', sub: 'どれが いちばん おもい？', make: makeShiso },
     { id: 'tonneru', name: 'トンネル', sub: 'とおると かずが かわる', make: makeTonneru },
     { id: 'onaji', name: 'おなじ かたち', sub: 'おなじ かたちは どれ？', make: makeOnaji },
-    { id: 'kasane', name: 'かさねる', sub: 'かさねると どうなる？', make: makeKasane }
+    { id: 'kasane', name: 'かさねる', sub: 'かさねると どうなる？', make: makeKasane },
+    { id: 'kisetsu', name: 'きせつ・なかま', sub: 'おなじ きせつ、おなじ なかまは どれ？', make: makeKisetsu },
+    { id: 'kotoba', name: 'ことば', sub: 'はじめの おと・しりとり・おとの かず', make: makeKotoba },
+    { id: 'ohanashi', name: 'おはなし', sub: 'きいて おぼえて こたえる', make: makeOhanashi }
   ];
   CM.GENRES = GENRES;
   var GENRE_BY_ID = {};
@@ -446,6 +657,14 @@
     if (q.g === 'tonneru') { return 'おやくそくの とおり トンネルを とおると、ボールは いくつに なる？'; }
     if (q.g === 'onaji') { return q.rot === 0 ? 'ひだりと おなじ かたちは どれ？' : 'ひだりの かたちを まわした ものは どれ？'; }
     if (q.g === 'kasane') { return 'うえの かみを ぜんぶ かさねると、どの かたちに なる？'; }
+    if (q.g === 'kisetsu') { return q.sub === 'season' ? 'ひだりの えと おなじ きせつの ものは どれ？' : 'ひだりの えと おなじ なかまは どれ？'; }
+    if (q.g === 'kotoba') {
+      if (q.sub === 'hajime') { return '「' + q.sound + '」で はじまる ものは どれ？'; }
+      if (q.sub === 'owari') { return '「' + q.sound + '」で おわる ものは どれ？'; }
+      if (q.sub === 'onsu') { return '「' + ITEM_BY_ID[q.target].name + '」は、おとが いくつ？'; }
+      return 'しりとり。' + ITEM_BY_ID[q.chain[0]].name + '、' + ITEM_BY_ID[q.chain[1]].name + '、つぎは どれ？';
+    }
+    if (q.g === 'ohanashi') { return q.ask; }
     return '';
   }
   CM.questionText = questionText;
@@ -466,9 +685,32 @@
     if (q.g === 'tonneru') { return 'トンネルの よこに、ふえる かず・へる かずを かいたよ。じゅんばんに たして ひいてね'; }
     if (q.g === 'onaji') { return 'まるで かこんだ ますが ちがうよ。しるしの ばしょと むきを 1つずつ くらべてね'; }
     if (q.g === 'kasane') { return 'みぎはしに、さいごの 1まい いがいを かさねた かたちを だしたよ。あと 1まいを たしてね'; }
+    if (q.g === 'kisetsu') {
+      return q.sub === 'season' ? 'ひだりの ' + ITEM_BY_ID[q.stem].name + ' は「' + SEASON_NAME[q.key] + '」の もの。えを 1つずつ「いつの きせつ？」と きいてみてね'
+        : 'ひだりの ' + ITEM_BY_ID[q.stem].name + ' は「' + CAT_NAME[q.key] + '」。えを 1つずつ「なんの なかま？」と きいてみてね';
+    }
+    if (q.g === 'kotoba') {
+      if (q.sub === 'hajime') { return 'えの なまえを ゆっくり いって、はじめの おとが「' + q.sound + '」か たしかめてね'; }
+      if (q.sub === 'owari') { return 'えの なまえを ゆっくり いって、さいごの おとが「' + q.sound + '」か たしかめてね'; }
+      if (q.sub === 'onsu') { return 'ゆびを 1ぽんずつ おりながら「' + ITEM_BY_ID[q.target].name + '」と ゆっくり いってね'; }
+      return ITEM_BY_ID[q.chain[1]].name + ' の さいごの おとは「' + q.sound + '」。「' + q.sound + '」で はじまる えを さがしてね';
+    }
+    if (q.g === 'ohanashi') { return 'おはなしを もういちど きいて（よんで）から こたえてね'; }
     return 'もういちど よく みてね';
   }
   CM.hintText = hintText;
+  /* 答えの あとの ひとこと（え の もんだい） */
+  CM.whyTextImg = function (q) {
+    var a;
+    if (q.g === 'kisetsu') { a = ITEM_BY_ID[q.choices[q.answerIndex]]; return a.name + ' は ' + (q.sub === 'season' ? SEASON_NAME[q.key] + ' の もの' : CAT_NAME[q.key] + ' の なかま') + ' だよ'; }
+    if (q.g === 'kotoba') {
+      if (q.sub === 'onsu') { return '「' + ITEM_BY_ID[q.target].name + '」は ' + ITEM_BY_ID[q.target].m.join('・') + ' で ' + q.answer + 'つ'; }
+      a = ITEM_BY_ID[q.choices[q.answerIndex]];
+      return '「' + a.name + '」だよ';
+    }
+    if (q.g === 'ohanashi') { return q.why; }
+    return '';
+  };
 
   /* ================= 絵を 描く ================= */
   function setupCanvas(canvas) {
@@ -875,6 +1117,45 @@
     ok(segSetSig(segsToSet(mapSegs(mapSegs(mapSegs(mapSegs(segs, rot90, 5), rot90, 5), rot90, 5), rot90, 5))) === segSetSig(set), 'T1 4回まわすと もどる');
     a = perturb(set, 5); ok(a === null || (segCount(a) === segCount(set) && segSetSig(a) !== segSetSig(set)), 'T1 1本ちがい は 本数が同じで 形がちがう');
 
+    /* T6 え の もんだい＝正解が 条件に あい、まちがいは 条件に あわない（300問ずつ）・絵の 一覧 66 */
+    ok(ITEMS.length === 66, 'T6 絵は 66');
+    (function () {
+      var seen = {}, n, w, p, t, it;
+      for (n = 0; n < ITEMS.length; n++) { ok(!seen[ITEMS[n].id], 'T6 id 重複 ' + ITEMS[n].id); seen[ITEMS[n].id] = true; ok(ITEMS[n].m.join('') === ITEMS[n].name, 'T6 音と なまえが 一致 ' + ITEMS[n].id); }
+      for (lvl = 1; lvl <= 3; lvl++) {
+        for (n = 0; n < 300; n++) {
+          q = makeKisetsu(lvl);
+          it = ITEM_BY_ID[q.stem];
+          ok(q.choices.indexOf(q.stem) < 0, 'T6 kisetsu おてほんは えらびしに ない');
+          for (j = 0; j < q.choices.length; j++) {
+            w = ITEM_BY_ID[q.choices[j]];
+            t = (q.sub === 'season') ? (w.season === it.season) : (w.cat === it.cat);
+            ok(t === (j === q.answerIndex), 'T6 kisetsu ' + q.sub + ' lv' + lvl + ' 正解だけが 同じ ' + q.stem + '→' + w.id);
+          }
+          q = makeKotoba(lvl);
+          ok(!!q, 'T6 kotoba 作れる lv' + lvl);
+          if (q.sub === 'onsu') { ok(ITEM_BY_ID[q.target].m.length === q.answer && q.choices.indexOf(q.answer) >= 0, 'T6 onsu 音の数'); }
+          else {
+            for (j = 0; j < q.choices.length; j++) {
+              w = ITEM_BY_ID[q.choices[j]];
+              if (q.sub === 'hajime' || q.sub === 'shiritori') { t = (firstMora(w) === q.sound); } else { t = (lastMora(w) === q.sound); }
+              ok(t === (j === q.answerIndex), 'T6 kotoba ' + q.sub + ' lv' + lvl + ' 正解だけが 音に あう ' + w.id + ' ' + q.sound);
+            }
+            if (q.sub === 'shiritori') { ok(firstMora(ITEM_BY_ID[q.chain[1]]) === lastMora(ITEM_BY_ID[q.chain[0]]), 'T6 しりとりの くさりが つながる'); }
+          }
+          q = makeOhanashi(lvl);
+          ok(q.parts.length === (lvl === 1 ? 2 : (lvl === 2 ? 3 : 5)), 'T6 ohanashi もんだいの 数 lv' + lvl + ' =' + q.parts.length);
+          for (p = 0; p < q.parts.length; p++) {
+            w = ITEM_BY_ID[q.parts[p].choices[q.parts[p].answerIndex]];
+            if (q.parts[p].ask.indexOf('きせつ') < 0) { ok(q.storyText.indexOf(w.name) >= 0, 'T6 ohanashi 正解は おはなしに 出てくる ' + w.id); }
+            for (j = 0; j < q.parts[p].choices.length; j++) {
+              if (j === q.parts[p].answerIndex || q.parts[p].ask.indexOf('きせつ') >= 0 || q.parts[p].ask.indexOf('かばん') >= 0) { continue; }
+              ok(q.storyText.indexOf(ITEM_BY_ID[q.parts[p].choices[j]].name) < 0, 'T6 ohanashi まちがいは おはなしに 出てこない ' + q.parts[p].choices[j]);
+            }
+          }
+        }
+      }
+    })();
     /* T2 もんだい＝全部の型・レベルで 300問ずつ＝正解が1つ・えらびしに 同じものなし */
     for (g = 0; g < GENRES.length; g++) {
       for (lvl = 1; lvl <= 3; lvl++) {

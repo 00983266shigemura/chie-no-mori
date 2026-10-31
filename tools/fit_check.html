@@ -46,6 +46,7 @@ document.getElementById('f').onload = function () {
       solveTen();
       return;
     }
+    if (el('story-box').style.display !== 'none' && el('story-go').style.display !== 'none') { if (meas('story' + gid)) { stop(); } el('story-go').click(); }
     ch = el('choices').getElementsByClassName('choice');
     for (k = 0; k < ch.length; k++) { if (k !== q.answerIndex) { wrongs.push(k); } }
     if (mode >= 1) { ch[wrongs[0]].click(); if (meas('hint' + gid)) { stop(); } }
@@ -54,10 +55,12 @@ document.getElementById('f').onload = function () {
   }
   try {
     w.CM.seed(7);
+    if (!/timer=1/.test(location.hash)) { w.CM.ui.setTimer(false); }   /* 制限時間は 別の検査（timer_check）で見る＝ここでは 止める（撮影で ぼうを 見たいときだけ #timer=1） */
     if (meas('home')) { stop(); }
-    var gids = ['ten', 'kagami', 'kazoe', 'shiso', 'tonneru', 'onaji', 'kasane', 'mix'], gi, q, r;
+    var gids = ['ten', 'kagami', 'kazoe', 'shiso', 'tonneru', 'onaji', 'kasane', 'kisetsu', 'kotoba', 'ohanashi', 'mix'], gi, q, r, expected = 0, planned0;
     for (gi = 0; gi < gids.length; gi++) {
       w.CM.ui.startRound(gids[gi]);
+      planned0 = w.CM.ui.round().planned;
       /* 2回目の まちがいの あとは「にた もんだい」が 1つ はさまる＝けっかの 画面が 出るまで 回す（最大 20問） */
       for (q = 0; q < 20 && el('scr-result').style.display === 'none'; q++) {
         if (meas('play' + gids[gi])) { stop(); }
@@ -68,7 +71,10 @@ document.getElementById('f').onload = function () {
         el('next-btn').click();
       }
       r = w.CM.ui.round();
-      if (r.qs.length !== r.planned + 1) { errs.push(gids[gi] + ' にた もんだいの 数が ちがう ' + r.qs.length + ' vs ' + (r.planned + 1)); }
+      expected += r.qs.length;
+      /* 4問目（添字3）で 2回まちがえる→ にた もんだいが はさまる。おはなしは おはなしごと（2〜5問）なので 数は 型で変わる */
+      if (r.qs[3].g === 'ohanashi') { if (r.qs.length < planned0 + 2) { errs.push(gids[gi] + ' おはなしの にた もんだいが はさまっていない ' + r.qs.length + ' vs ' + planned0); } }
+      else if (r.qs.length !== planned0 + 1) { errs.push(gids[gi] + ' にた もんだいの 数が ちがう ' + r.qs.length + ' vs ' + (planned0 + 1)); }
       if (!r.qs[4].retest || r.qs[4].g !== r.qs[3].g || r.qs[4].level !== r.qs[3].level) { errs.push(gids[gi] + ' にた もんだいが 同じ型・同じレベルでない'); }
       if (meas('result' + gids[gi])) { stop(); }
       el('res-home').click();
@@ -84,7 +90,8 @@ document.getElementById('f').onload = function () {
       put('ERRS=' + errs.length + (errs.length ? ' ' + errs.join(' | ') : ''));
       var asked = w.__audioAsked, silent = (typeof asked === 'number' && asked > 0 && w.CM.snd.ctx === null);
       put('AUDIO asked=' + asked + ' ctx=' + (w.CM.snd.ctx === null ? 'なし' : 'あり') + ' → ' + (silent ? '無音' : '無音でない'));
-      put(fails.length === 0 && errs.length === 0 && silent && played === 48 ? 'FIT=PASS' : 'FIT=FAIL played=' + played + ' ' + (silent ? '' : '無音化が効いていない ') + fails.slice(0, 12).join(' / ') + ' ' + errs.slice(0, 6).join(' | '));
+      put('EXPECTED=' + expected);
+      put(fails.length === 0 && errs.length === 0 && silent && played === expected && played >= 66 ? 'FIT=PASS' : 'FIT=FAIL played=' + played + ' expected=' + expected + ' ' + (silent ? '' : '無音化が効いていない ') + fails.slice(0, 12).join(' / ') + ' ' + errs.slice(0, 6).join(' | '));
     }, 1500);
   } catch (e) {
     if (e === 'shot') { put('SHOT=' + shot); document.getElementById('out').style.display = 'none'; }

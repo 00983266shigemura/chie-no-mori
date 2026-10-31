@@ -1,12 +1,79 @@
 CACHE MANIFEST
-# ちえの もり はんすう 4
-# index.html md5 56b5ddb8818aaeffcd9cfd0b264e8294
+# ちえの もり はんすう 5
+# index.html md5 aeceb2489445e33b9c728cbf750f7216
 # icon.png md5 d9120e5974506a2bd0fd3599681f4a84
+# img 66 files md5 aaf6577269181d7d25b96296a0fedb27
 
 CACHE:
 ./
 index.html
 icon.png
+img/asagao.png
+img/banana.png
+img/basu.png
+img/boushi.png
+img/christmas_tree.png
+img/daikon.png
+img/densha.png
+img/enpitsu.png
+img/gorira.png
+img/hana.png
+img/hasami.png
+img/hato.png
+img/himawari.png
+img/hinamatsuri.png
+img/hon.png
+img/ichigo.png
+img/inu.png
+img/isu.png
+img/jitensha.png
+img/kabutomushi.png
+img/kaeru.png
+img/kagamimochi.png
+img/kaki.png
+img/kakigori.png
+img/kamakiri.png
+img/kame.png
+img/karasu.png
+img/kasa.png
+img/ki.png
+img/kingyo.png
+img/koinobori.png
+img/kosumosu.png
+img/kuma.png
+img/kuri.png
+img/kuruma.png
+img/kutsu.png
+img/mikan.png
+img/momiji.png
+img/neko.png
+img/nezumi.png
+img/otsukimi.png
+img/panda.png
+img/rappa.png
+img/ringo.png
+img/sakura.png
+img/saru.png
+img/semi.png
+img/setsubun.png
+img/suika.png
+img/suzume.png
+img/tai.png
+img/tanabata.png
+img/tanpopo.png
+img/tentoumushi.png
+img/terebi.png
+img/tokage.png
+img/tokei.png
+img/tonbo.png
+img/tsubaki.png
+img/tsukue.png
+img/tsumiki.png
+img/tulip.png
+img/uchiwa.png
+img/unagi.png
+img/yukidaruma.png
+img/zou.png
 
 NETWORK:
 *

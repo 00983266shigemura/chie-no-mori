@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!-- ちえの もり ── 制限時間の 検査（CCが使う。tools/check_all.zsh から よぶ・無音の複製で）
+     (1) 問題を出すと ぼうが 出て、へっていく  (2) じかんぎれ 1回目＝ヒント＋ぼうが もどる  (3) 2回目＝こたえが 出て「つぎへ」と にた もんだい
+     (4) 正解すると ぼうが 止まる  (5) おはなしは「きいたよ」の あとに ぼうが はじまる  (6) 型ごとの 秒数が 過去問の表と 一致 -->
+<html lang="ja"><head><meta charset="utf-8"><title>timer check</title></head>
+<body style="margin:0">
+<iframe id="f" src="../logs/silent_index.html" style="width:1024px;height:640px;border:0;display:block"></iframe>
+<pre id="out"></pre>
+<script>
+function put(s) { document.getElementById('out').textContent += s + '\n'; }
+document.getElementById('f').onload = function () {
+  var w = this.contentWindow, d = w.document, fails = [], n = 0, tm, r, q, t0, keys, k, lv;
+  function el(id) { return d.getElementById(id); }
+  function ok(c, label) { n++; if (!c) { fails.push(label); } }
+  try {
+    w.CM.seed(5);
+    /* (6) 秒数の表 */
+    keys = ['ten', 'kagami', 'kazoe', 'shiso', 'tonneru', 'onaji', 'kasane', 'kisetsu', 'kotoba', 'ohanashi'];
+    for (k = 0; k < keys.length; k++) { for (lv = 1; lv <= 3; lv++) { ok(w.CM.TIME_SEC[keys[k]][lv] >= 15 && w.CM.TIME_SEC[keys[k]][lv] <= 90, '秒数が 15〜90 ' + keys[k] + ' lv' + lv); } }
+    ok(w.CM.TIME_SEC.ten[1] > w.CM.TIME_SEC.ten[3] && w.CM.TIME_SEC.shiso[3] === 15, 'むずかしい ほど みじかい・シーソー むずかしい＝15（各15秒）');
+    /* (1) ぼうが 出る */
+    w.CM.ui.state().g.kagami.level = 2;
+    w.CM.ui.startRound('kagami');
+    tm = w.CM.ui.timer();
+    ok(el('tbar').style.display === 'block' && tm.total === w.CM.TIME_SEC.kagami[2] && tm.timer !== null, 'ぼうが 出て 動いている total=' + tm.total);
+    t0 = tm.left;
+    /* (2) じかんぎれ 1回目（道具で 直接 起こす） */
+    w.CM.ui.timeout();
+    r = w.CM.ui.round();
+    ok(r.tries === 1 && r.hint === true && !r.done && el('msg').textContent.indexOf('じかんだよ') >= 0 && tm.left === tm.total, '1回目＝ヒント＋ぼうが もどる tries=' + r.tries + ' left=' + tm.left);
+    ok(el('next-btn').style.display === 'none', '1回目では つぎへ が 出ない');
+    /* (3) 2回目 */
+    w.CM.ui.timeout();
+    ok(r.done === true && el('next-btn').style.display !== 'none' && tm.timer === null, '2回目＝こたえが 出て 止まる');
+    ok(r.qs.length === r.planned + 1 && r.qs[1].retest === true, '2回目の あとに にた もんだいが はさまる');
+    ok(el('msg').textContent.indexOf('こたえは これ') >= 0, 'こたえの 文');
+    /* (4) 正解で 止まる */
+    el('next-btn').click();
+    q = r.qs[r.idx];
+    ok(tm.timer !== null, 'つぎの 問題で また 動く');
+    el('choices').getElementsByClassName('choice')[q.answerIndex].click();
+    ok(tm.timer === null && r.done === true, '正解で 止まる');
+    el('play-back').click();
+    /* (5) おはなし＝きいたよ の あとで はじまる */
+    w.CM.ui.state().g.ohanashi.level = 2;
+    w.CM.ui.startRound('ohanashi');
+    ok(el('story-box').style.display === 'block' && tm.timer === null, 'おはなしの あいだは ぼうが 動かない');
+    el('story-go').click();
+    ok(el('story-box').style.display === 'none' && tm.timer !== null && tm.total === w.CM.TIME_SEC.ohanashi[2], 'きいたよ の あとに 動く');
+    /* てんせん でも じかんぎれが 効く */
+    el('play-back').click();
+    w.CM.ui.startRound('ten');
+    w.CM.ui.timeout(); r = w.CM.ui.round();
+    ok(w.CM.ui.ten().ghost === true && r.tries === 1, 'てんせん 1回目＝うすい おてほん');
+    w.CM.ui.timeout();
+    ok(r.done === true && w.CM.segSetSig(w.CM.ui.ten().set) === r.qs[0].modelSig, 'てんせん 2回目＝こたえが 出る');
+    el('play-back').click();
+    put('TIMER checks=' + n + ' fails=' + fails.length + (fails.length ? ' ' + fails.join(' | ') : ''));
+    put(fails.length === 0 ? 'TIMER=PASS' : 'TIMER=FAIL');
+  } catch (e) { put('TIMER=FAIL 例外 ' + e + (e && e.stack ? ' ' + e.stack : '')); }
+};
+</script>
+</body></html>

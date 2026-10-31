@@ -50,6 +50,11 @@ TAP2=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-f
   --dump-dom "file://$ROOT/tools/tap_check.html" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
 print -r -- "$TAP2" | sed 's/^TAP/TAP(dpr2)/'
 print -r -- "$TAP2" | grep -qx 'TAP=PASS' || touch "$FAILFILE"
+print "== 9/9 制限時間＝ぼうが 出て、じかんぎれで ヒント→こたえ、正解で 止まる（無音の複製で） =="
+TMR=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=5000 --window-size=1040,700 \
+  --dump-dom "file://$ROOT/tools/timer_check.html" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
+print -r -- "$TMR"
+print -r -- "$TMR" | grep -qx 'TIMER=PASS' || touch "$FAILFILE"
 if [[ -e "$FAILFILE" ]]; then print "== けっか: FAIL =="; else print "== けっか: PASS =="; fi
 } 2>&1 | tee "$LOG"
 if [[ -e "$FAILFILE" ]]; then rm -f "$FAILFILE"; exit 1; fi

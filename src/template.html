@@ -78,6 +78,26 @@
   .tenbtns{margin-top:6px;}
   .tenbtns button{margin:4px 4px; min-height:0; padding:10px 14px; font-size:0.75rem;}
   #ten-check{background:var(--daidai); font-size:0.92rem; padding:10px 26px;}
+  /* え の もんだい（きせつ・なかま／ことば／おはなし） */
+  .stem-html{text-align:center; overflow:hidden;}
+  .stem-html img{width:150px; height:150px; vertical-align:middle; border:3px solid var(--line); border-radius:14px; background:#fff;}
+  .stem-html .arrow{display:inline-block; font-size:1.6rem; font-weight:bold; margin:0 6px; vertical-align:middle;}
+  .stem-html .qmark{display:inline-block; width:100px; height:100px; line-height:100px; font-size:2.2rem; font-weight:bold; border:3px dashed var(--line); border-radius:14px; vertical-align:middle; color:var(--ink-soft);}
+  .stem-html.chain img{width:100px; height:100px;}
+  .choice img.cimg{display:block; width:100%; max-width:170px; height:auto; margin:0 auto;}
+  .choice-img{width:40%; max-width:210px; padding:4px;}
+  .choice-img .mark{min-height:1.2em;}
+  .story{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:10px 14px; margin:8px 0; text-align:center;}
+  .story-head{font-size:0.67rem; color:var(--ink-soft);}
+  .story-text{font-size:0.92rem; line-height:1.7; margin:6px 0 8px; text-align:left; word-break:keep-all;}
+  #story-go{background:var(--daidai);}
+  /* 制限時間＝へっていく ぼう（した）。いろ＋のこりの かずの 2つで しらせる */
+  .tbar{position:relative; height:22px; margin:6px auto 0; max-width:640px; background:var(--line); border-radius:11px; overflow:hidden;}
+  .tbar-fill{position:absolute; left:0; top:0; bottom:0; width:100%; background:#3cb371; -webkit-transition:width 0.25s linear; transition:width 0.25s linear;}
+  .tbar.mid .tbar-fill{background:#f5a623;}
+  .tbar.low .tbar-fill{background:#e8503a;}
+  .tbar-txt{position:relative; display:block; text-align:center; font-size:0.67rem; font-weight:bold; line-height:22px; color:#222;}
+  .tbar.low .tbar-txt{color:#fff;}
   .msg{text-align:center; font-size:0.83rem; min-height:1.6em; margin:6px 0; line-height:1.4;}
   .msg.good{color:var(--ao); font-weight:bold;}
   .msg.warn{color:var(--daidai-ink); font-weight:bold;}
@@ -87,6 +107,10 @@
   /* けっか */
   .res{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:16px; text-align:center;}
   .res canvas{width:150px; height:150px;}
+  .res.born canvas{width:200px; height:200px; -webkit-animation:born 0.9s ease-out 2; animation:born 0.9s ease-out 2;}
+  .res.born #res-events{font-size:1.08rem; font-weight:bold; color:var(--ao);}
+  @-webkit-keyframes born{0%{-webkit-transform:scale(0.6) rotate(-8deg);}50%{-webkit-transform:scale(1.12) rotate(6deg);}100%{-webkit-transform:scale(1) rotate(0);}}
+  @keyframes born{0%{transform:scale(0.6) rotate(-8deg);}50%{transform:scale(1.12) rotate(6deg);}100%{transform:scale(1) rotate(0);}}
   .stars{font-size:1.42rem; letter-spacing:4px; color:var(--daidai);}
   .res button{margin:8px 6px;}
 
@@ -116,6 +140,12 @@
     #scr-play .tenbox{float:right; width:48%; margin-top:4px;}
     #scr-play .msg{float:left; clear:left; width:50%; margin:6px 0 2px;}
     #scr-play .playfoot{float:left; clear:left; width:50%;}
+    #scr-play .tbar{float:left; clear:left; width:50%; margin-top:4px;}
+    #scr-play .story{float:left; width:50%; margin:4px 0 0; padding:8px;}
+    #scr-play .story-text{font-size:0.83rem; line-height:1.6;}
+    .gbtn{width:31.3%; margin:0.8%; padding:6px 10px;}
+    .gbtn span{font-size:0.5rem;}
+    .choice-img{width:40%; max-width:210px;}
     .choice{margin:1% 1.5%; max-width:200px;}
     .choice-shape{max-width:150px;}
     #scr-home .head,#scr-home > .note,#scr-home .egg-row,#scr-home .home-foot{float:left; clear:left; width:40%;}
@@ -123,6 +153,11 @@
     .zcard{width:22%;}
     .grown-l{float:left; width:48%;}
     .grown-r{float:right; width:48%;}
+    .grown{padding:6px 12px; font-size:0.54rem; line-height:1.3;}
+    .grown table{font-size:0.5rem; line-height:1.15; margin:3px 0;}
+    .grown th,.grown td{padding:1px 4px;}
+    .grown p,.grown ul{margin:2px 0;}
+    .grown h3{margin:2px 0;}
   }
   @media (max-width:600px){
     .gbtn{width:98%;}
@@ -159,9 +194,14 @@
     <span id="play-genre"></span><span id="play-no"></span>
     <button id="say-btn" class="sub small">よむ</button>
   </div>
-  <div class="qbox">
+  <div id="story-box" class="story" style="display:none">
+    <div class="story-head">おはなしを よく きいてね（おとなのひとが よんでも いいよ）</div>
+    <div id="story-text" class="story-text"></div>
+    <div><button id="story-say" class="sub small">もういちど よむ</button> <button id="story-go">きいたよ！ もんだいへ</button></div>
+  </div>
+  <div class="qbox" id="q-box">
     <div id="q-text" class="qtext"></div>
-    <div id="q-stem-wrap" class="qstem"><canvas id="q-stem" width="270" height="270"></canvas></div>
+    <div id="q-stem-wrap" class="qstem"><canvas id="q-stem" width="270" height="270"></canvas><div id="q-stem-html" class="stem-html" style="display:none"></div></div>
   </div>
   <div id="choices" class="choices"></div>
   <div id="ten-box" class="tenbox" style="display:none">
@@ -175,11 +215,12 @@
   </div>
   <div id="msg" class="msg"></div>
   <div class="playfoot"><button id="next-btn" style="display:none">つぎへ</button></div>
+  <div id="tbar" class="tbar" style="display:none"><div id="tbar-fill" class="tbar-fill"></div><span id="tbar-txt" class="tbar-txt"></span></div>
 </div>
 
 <!-- ===== けっか ===== -->
 <div id="scr-result" class="screen" style="display:none">
-  <div class="res">
+  <div class="res" id="res-card">
     <h2 id="res-title"></h2>
     <div id="res-stars" class="stars"></div>
     <p id="res-score"></p>
