@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 3;
+  CM.APP_VERSION = 4;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
@@ -473,6 +473,8 @@
   /* ================= 絵を 描く ================= */
   function setupCanvas(canvas) {
     var css = canvas.clientWidth || parseInt(canvas.getAttribute('width'), 10) || 120, dpr = global.devicePixelRatio || 1, ctx, px = Math.round(css * dpr), h = canvas.clientHeight || css, py = Math.round(h * dpr);
+    /* 見た目の大きさを CSS で固定してから 中の画素数を dpr 倍にする。固定しないと、画素数を増やした分だけ 見た目も広がり、描くたびに 2倍・4倍… と育つ（きめこまかい画面＝iPad で実測・2026-11-01） */
+    if (!canvas.style.width) { canvas.style.width = css + 'px'; canvas.style.height = h + 'px'; }
     if (canvas.width !== px || canvas.height !== py) { canvas.width = px; canvas.height = py; }
     ctx = canvas.getContext('2d');
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.scale(dpr, dpr);

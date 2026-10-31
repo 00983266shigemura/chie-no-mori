@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- ちえの もり ── 画面の きめこまかさ（devicePixelRatio）が 2 のときに、てんせんの キャンバスの 大きさが 描くたびに 変わらないかの 検査（CCが使う） -->
+<html lang="ja"><head><meta charset="utf-8"><title>dpr probe</title></head>
+<body style="margin:0">
+<iframe id="f" src="../logs/silent_index.html" style="width:1024px;height:640px;border:0;display:block"></iframe>
+<pre id="out"></pre>
+<script>
+function put(s) { document.getElementById('out').textContent += s + '\n'; }
+document.getElementById('f').onload = function () {
+  var w = this.contentWindow, d = w.document, cv, a, b, c, t, rect, fails = [], n = 0;
+  function ok(cond, label) { n++; if (!cond) { fails.push(label); } }
+  function size() { return cv.clientWidth + 'x' + cv.clientHeight + ' attr=' + cv.width + 'x' + cv.height + ' style=' + (cv.style.width || '-'); }
+  function tap(p) { var ev = d.createEvent('MouseEvents'); ev.initMouseEvent('mousedown', true, true, w, 0, 0, 0, rect.left + t.geom.pad + p[0] * t.geom.step, rect.top + t.geom.pad + p[1] * t.geom.step, false, false, false, false, 0, null); cv.dispatchEvent(ev); }
+  try {
+    put('dpr=' + w.devicePixelRatio);
+    w.CM.seed(3); w.CM.ui.state().g.ten.level = 1; w.CM.ui.startRound('ten');
+    cv = d.getElementById('ten-canvas'); t = w.CM.ui.ten();
+    a = size(); put('1回目の 描画のあと ' + a);
+    rect = cv.getBoundingClientRect(); tap([0, 0]);
+    b = size(); put('タップ（再描画）のあと ' + b);
+    rect = cv.getBoundingClientRect(); tap([1, 0]);
+    c = size(); put('2回目の タップのあと ' + c);
+    ok(cv.clientWidth === 300 && cv.clientHeight === 300, '見た目の 大きさが 300 のまま（' + c + '）');
+    ok(cv.width === Math.round(300 * w.devicePixelRatio), '中の 画素数が 300×dpr（' + cv.width + '）');
+    ok(w.CM.segSetSig(t.set) !== '', '2回の タップで 線が 1本 引けた（' + w.CM.segSetSig(t.set) + '）');
+    put('DPR checks=' + n + ' fails=' + fails.length + (fails.length ? ' ' + fails.join(' | ') : ''));
+    put(fails.length === 0 ? 'DPR=PASS' : 'DPR=FAIL');
+  } catch (e) { put('DPR=FAIL 例外 ' + e); }
+};
+</script>
+</body></html>

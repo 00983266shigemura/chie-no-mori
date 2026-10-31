@@ -96,6 +96,7 @@
     if (q.kind === 'tap') {
       box.style.display = 'none';
       el('ten-box').style.display = 'block';
+      sizeCanvas(el('ten-canvas'), 300, 300);   /* 見た目の大きさを固定（固定しないと きめこまかい画面で 描くたびに育つ） */
       T = { cur: null, set: {}, hist: [], ghost: false };
       paintTen();
       setText(el('msg'), 'てんを じゅんばんに タップして、ひだりと おなじ かたちに してね');

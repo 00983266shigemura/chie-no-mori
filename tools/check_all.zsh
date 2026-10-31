@@ -41,6 +41,15 @@ TAP=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-fr
   --dump-dom "file://$ROOT/tools/tap_check.html" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
 print -r -- "$TAP"
 print -r -- "$TAP" | grep -qx 'TAP=PASS' || touch "$FAILFILE"
+print "== 8/8 きめこまかい画面（dpr=2・iPad と同じ）で キャンバスが育たず タップが線になるか（無音の複製で） =="
+DPR=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=20000 --window-size=1040,700 --force-device-scale-factor=2 \
+  --dump-dom "file://$ROOT/tools/dpr_probe.html" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
+print -r -- "$DPR"
+print -r -- "$DPR" | grep -qx 'DPR=PASS' || touch "$FAILFILE"
+TAP2=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=20000 --window-size=1040,700 --force-device-scale-factor=2 \
+  --dump-dom "file://$ROOT/tools/tap_check.html" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
+print -r -- "$TAP2" | sed 's/^TAP/TAP(dpr2)/'
+print -r -- "$TAP2" | grep -qx 'TAP=PASS' || touch "$FAILFILE"
 if [[ -e "$FAILFILE" ]]; then print "== けっか: FAIL =="; else print "== けっか: PASS =="; fi
 } 2>&1 | tee "$LOG"
 if [[ -e "$FAILFILE" ]]; then rm -f "$FAILFILE"; exit 1; fi
