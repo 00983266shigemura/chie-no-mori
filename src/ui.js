@@ -37,7 +37,7 @@
       box.appendChild(b);
     }
     b = doc.createElement('button'); b.className = 'gbtn g-mix'; b.setAttribute('data-g', 'mix');
-    b.innerHTML = '<b>まぜまぜ</b><span>いろいろな もんだいが つぎつぎ 出る（ほんばんみたい）</span><span class="rec">' + (S.mix.rounds ? S.mix.ok + '／' + S.mix.q + ' せいかい' : '') + '</span>';
+    b.innerHTML = '<b>まぜまぜ</b><span>いろいろな もんだいが つぎつぎ でる（ほんばんみたい）</span><span class="rec">' + (S.mix.rounds ? S.mix.ok + '／' + S.mix.q + ' せいかい' : '') + '</span>';
     box.appendChild(b);
   }
 
@@ -172,7 +172,7 @@
     if (q.g === 'kazoe') { return CM.SHAPE_NAMES[q.target] + ' は ' + q.answer + 'こ あったよ'; }
     if (q.g === 'tonneru') { return 'はじめ ' + q.start + 'こ → ' + q.answer + 'こ'; }
     if (q.g === 'shiso') { return 'おもい じゅんに ' + shapeList(q.order) + ' だよ'; }
-    return 'つぎは よく見て えらんでみよう';
+    return 'つぎは よく みて えらんでみよう';
   }
   function shapeList(arr) { var i, s = []; for (i = 0; i < arr.length; i++) { s.push(CM.SHAPE_NAMES[arr[i]]); } return s.join('・'); }
 
@@ -233,7 +233,7 @@
       T.set = {}; T.cur = null; T.ghost = false;
       for (k in q.model) { if (q.model.hasOwnProperty(k)) { T.set[k] = q.model[k]; } }
       paintTen();
-      setText(el('msg'), 'こたえは これ。はじめの てんの ばしょを よく見てね。' + planRetest(q));
+      setText(el('msg'), 'こたえは これ。はじめの てんの ばしょを よく みてね。' + planRetest(q));
       el('msg').className = 'msg warn';
       el('next-btn').style.display = 'inline-block';
     }
