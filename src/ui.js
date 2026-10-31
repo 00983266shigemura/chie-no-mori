@@ -53,7 +53,7 @@
       lv = S.g[gid].level;
       for (i = 0; i < S.perRound; i++) { qs.push(CM.makeQuestion(gid, lv)); }
     }
-    G = { gid: gid, qs: qs, idx: 0, ok: 0, firstOk: 0, leaves: 0, tries: 0, done: false, streak: 0, hint: false, planned: qs.length };
+    G = { gid: gid, qs: qs, idx: 0, ok: 0, firstOk: 0, firstOkMain: 0, leaves: 0, tries: 0, done: false, streak: 0, hint: false, planned: qs.length };
     show('play');
     renderQuestion();
   }
@@ -123,7 +123,7 @@
   function gotRight() {
     var leaves = (G.tries === 0) ? 2 : 1, bonus = '';
     G.done = true;
-    G.ok++; if (G.tries === 0) { G.firstOk++; G.streak++; } else { G.streak = 0; }
+    G.ok++; if (G.tries === 0) { G.firstOk++; G.streak++; if (!G.qs[G.idx].retest) { G.firstOkMain++; } } else { G.streak = 0; }
     if (G.streak >= 3) { leaves += 1; bonus = '（3もん れんぞく！ ボーナス ＋1）'; CM.snd.play('combo'); } else { CM.snd.play(G.tries === 0 ? 'ok' : 'ok2'); }
     G.leaves += leaves;
     setText(el('msg'), 'せいかい！ ' + (G.tries === 0 ? CM.praise() + '。' : 'なおせたね。') + 'はっぱ ' + leaves + 'まい ' + bonus);
@@ -252,7 +252,7 @@
     else { st = S.g[G.gid]; gname = CM.genreById(G.gid).name; }
     st.rounds++; st.q += G.qs.length; st.ok += G.ok;
     if (G.gid !== 'mix') {
-      newLv = CM.nextLevel(st.level, G.firstOk, G.qs.length);
+      newLv = CM.nextLevel(st.level, G.firstOkMain, G.planned);   /* 分母は 予定の問題数・にた もんだい は数えない */
       if (newLv > st.level) { lines.push(gname + ' が「' + CM.LEVEL_NAME[newLv] + '」に あがった！'); }
       if (newLv < st.level) { lines.push('つぎは「' + CM.LEVEL_NAME[newLv] + '」で れんしゅう'); }
       st.level = newLv;

@@ -3,7 +3,7 @@
    ・古い Safari で動く書き方だけ（var と function。let/const/アロー/テンプレート文字列は使わない）
    ・絵文字は使わない（この端末の字の在庫は 2016年で止まっている）
    ・端末内保存（localStorage）は try-catch で包み、やり直しの手段を画面に置く
-   ・問題は全部 その場で作る＝同じ問題は二度と出ない。正解は 機械で確かめてから出す（selfTest）
+   ・問題は全部 その場で作る（同じ形が また出ることはある）。正解は 機械で確かめてから出す（selfTest）
    もんだいの型（過去問 2022〜2025年度の ペーパーから）＝
      ten     てんせん（点図形の模写）  … 問題4・18・25・35
      kagami  かがみ・みずうみ（鏡図形・水面）… 問題4・17
@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 2;
+  CM.APP_VERSION = 3;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
@@ -356,8 +356,10 @@
     var lv = ONAJI_LV[level], tries, base, rot, correct, pool, cands, seen, i, s, q, idx;
     for (tries = 0; tries < 60; tries++) {
       base = makeGrid(3, lv.count); rot = pick(lv.rots); correct = transformGrid(base, rot);
-      seen = {}; seen[gridSig(correct)] = true; cands = [];
-      pool = shuffle([gridOneTurn(correct), gridOneMove(correct), gridSwapKind(correct), gridOneTurn(correct), transformGrid(base, (rot + 1 + ri(3)) % 4)]);
+      /* 問いは「まわした ものは どれ？」＝回す回数を言わないので、もとの形の どの回転も 正しい答えになる。
+         まちがいの候補は base の 4回転の どれとも 一致しないものだけ（査読 2026-10-31 指摘1） */
+      seen = {}; for (i = 0; i < 4; i++) { seen[gridSig(transformGrid(base, i))] = true; } cands = [];
+      pool = shuffle([gridOneTurn(correct), gridOneMove(correct), gridSwapKind(correct), gridOneTurn(correct), gridOneMove(correct)]);
       for (i = 0; i < pool.length && cands.length < 3; i++) {
         if (!pool[i]) { continue; }
         s = gridSig(pool[i]); if (seen[s]) { continue; } seen[s] = true; cands.push(pool[i]);
@@ -925,6 +927,8 @@
           }
           if (q.g === 'onaji') {
             ok(gridSig(q.choices[q.answerIndex]) === gridSig(transformGrid(q.base, q.rot)), 'T2 onaji 正解＝まわした形');
+            /* まちがいの選択肢は もとの形の どの回転とも ちがう（正しい答えが 2つに ならない） */
+            for (j = 0; j < q.choices.length; j++) { if (j === q.answerIndex) { continue; } for (k = 0; k < 4; k++) { ok(gridSig(q.choices[j]) !== gridSig(transformGrid(q.base, k)), 'T2 onaji まちがいは base の回転でない lv' + lvl); } }
             ok(gridDistinctRot(q.base), 'T2 onaji 4回の回転が 全部ちがう');
             if (lvl === 1) { ok(q.rot === 0, 'T2 onaji やさしい は まわさない'); }
             if (lvl === 3) { ok(q.rot !== 0, 'T2 onaji むずかしい は まわす'); }
