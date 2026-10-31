@@ -2,8 +2,9 @@
 #   (a) 未保存の変更がある → 1/9 で止まる
 #   (b) 取り込みが途中 → 3/9 で止まる
 #   (c) 公開先の登録が違う → 2/9 で止まる
+#   (d) 記録の名義が公開用でない → 6/9 の送る直前で止まる（公開先は手元の空の置き場＝通信なし）
 #   試験用の複製を scratchpad に作り、環境変数で台本に差し替えて実行する。本物の repo には触れない。
-# 終了コード 0=3通りとも想定どおり止まった / 1=どれかが想定と違う
+# 終了コード 0=4通りとも想定どおり止まった / 1=どれかが想定と違う
 ROOT="/Users/shigemurasatoshi/dev/chie-no-mori"
 WORK="${1:-/tmp/cm_push_neg_$$}"
 mkdir -p "$WORK/logs"
@@ -29,6 +30,16 @@ run_case "(b) 取り込みが途中" "取り込みが途中" "$WORK/b"
 # (c)
 rm -rf "$WORK/c"; git clone -q "$ROOT" "$WORK/c" && cp "$ROOT/icon.png" "$WORK/c/icon.png" && git -C "$WORK/c" remote set-url origin "https://github.com/someone-else/other.git"
 run_case "(c) 公開先が違う" "台本の知っている場所" "$WORK/c"
+# (d) 記録の名義が公開用でない → 6/9 の送る直前で止まる（公開先は手元の空の置き場＝通信なし・gh は常に成功の代役）
+rm -rf "$WORK/d" "$WORK/d_origin"; git init -q --bare "$WORK/d_origin" && git clone -q "$ROOT" "$WORK/d" && cp "$ROOT/icon.png" "$WORK/d/icon.png" \
+  && git -C "$WORK/d" remote set-url origin "$WORK/d_origin" \
+  && git -C "$WORK/d" -c user.name="someone" -c user.email="someone@example.com" commit -q --allow-empty -m "test identity"
+out="$(KZ_REPO_DIR="$WORK/d" KZ_LOG_DIR="$WORK/logs" KZ_GH=/usr/bin/true KZ_ORIGIN_URL="$WORK/d_origin" zsh "$ROOT/push.zsh" 2>&1)"; rc=$?
+if [[ $rc -eq 1 ]] && print -r -- "$out" | grep -q -- "記録の名義" && [[ -z "$(git -C "$WORK/d_origin" branch --list main)" ]]; then
+  print "✓ (d) 名義が公開用でない ＝ 想定どおり止まった（何も送っていない）"
+else
+  print "✕ (d) 名義が公開用でない ＝ 想定と違う（exit=$rc）"; print -r -- "$out" | tail -5; bad=1
+fi
 rm -rf "$WORK"
-[[ $bad -eq 0 ]] && print "== けっか: PASS（3/3） ==" || print "== けっか: FAIL =="
+[[ $bad -eq 0 ]] && print "== けっか: PASS（4/4） ==" || print "== けっか: FAIL =="
 exit $bad

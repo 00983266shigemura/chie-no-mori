@@ -88,6 +88,12 @@ else
 fi
 
 print "== 6/9 送る =="
+# 送る前に、記録（コミット）の名義が公開用（くるくる ずけい と同じ）だけであることを確かめる（本名・個人のメールを公開しない）
+PUB_NAME="00983266shigemura"
+PUB_MAIL="296550467+00983266shigemura@users.noreply.github.com"
+BADID="$("$GIT" -C "$REPO_DIR" log --format='%an|%ae|%cn|%ce' | grep -v -F -x "${PUB_NAME}|${PUB_MAIL}|${PUB_NAME}|${PUB_MAIL}" | wc -l | tr -d ' ')"
+[[ "$BADID" == "0" ]] || stop "記録の名義が公開用（${PUB_NAME}）でないものが ${BADID} 件あります。何も送っていません（CCが直し方を出します）"
+print "✓ 記録の名義はすべて公開用（${PUB_NAME}）"
 "$GIT" -C "$REPO_DIR" push -u origin main || stop "送信に失敗しました（公開は変わっていません）"
 
 print "== 7/9 送れたか =="
