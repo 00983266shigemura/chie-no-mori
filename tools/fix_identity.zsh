@@ -22,6 +22,7 @@ stop() { print "✕ 中止：$1"; print "END run_id=${RUN_ID} exit=1"; exit 1; }
 GH_ID="$("$GH" api user --jq .id)" || stop "GitHub の利用者番号を取れませんでした"
 PUB_MAIL="${GH_ID}+${OWNER}@users.noreply.github.com"
 TREE0="$("$GIT" -C "$ROOT" rev-parse 'HEAD^{tree}')"
+HEAD0="$("$GIT" -C "$ROOT" rev-parse --short HEAD)"
 N0="$("$GIT" -C "$ROOT" rev-list --count HEAD)"
 MD5_0="$(/sbin/md5 -q "$ROOT/index.html")"
 
@@ -47,6 +48,7 @@ BAD="$("$GIT" -C "$ROOT" log --format='%an|%ae|%cn|%ce' | grep -v -E "$RE" | wc 
 [[ "$MD5_0" == "$MD5_1" ]] || stop "index.html が変わりました"
 [[ "$BAD" == "0" ]] || stop "名義のそろっていない記録が ${BAD} 件 残っています"
 print "✓ 中身は同じ（木=${TREE1} 記録数=${N1} index.html md5=${MD5_1}）・名義の違う記録=0"
+print "記録番号 旧=${HEAD0} 新=$("$GIT" -C "$ROOT" rev-parse --short HEAD)（旧の番号を書いた文書は 旧→新 に直す＝vault の sweep_old_text.zsh で残りを探す）"
 
 if [[ "$MODE" == "--no-push" ]]; then
   print "（試験＝公開はしません）"
