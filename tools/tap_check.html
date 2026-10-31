@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!-- ちえの もり ── てんせん の タップが 本当に 線になるかの 検査（CCが使う。tools/check_all.zsh から よぶ）
+     画面の 点の 座標に マウスの おしこみ（mousedown）を 送り、おてほんと 同じ形が できて「できた！」が 正解になるかを 見る。
+     ななめでない 2点（つなげない）と、1回目の まちがい（うすい おてほん）も 見る -->
+<html lang="ja"><head><meta charset="utf-8"><title>tap check</title></head>
+<body style="margin:0">
+<iframe id="f" src="../logs/silent_index.html" style="width:1024px;height:640px;border:0;display:block"></iframe>
+<pre id="out"></pre>
+<script>
+function put(s) { document.getElementById('out').textContent += s + '\n'; }
+document.getElementById('f').onload = function () {
+  var w = this.contentWindow, d = w.document, fails = [], n = 0, r, q, cv, rect, t, segs, i, k, lv, msg, tries;
+  function el(id) { return d.getElementById(id); }
+  function ok(c, label) { n++; if (!c) { fails.push(label); } }
+  function tap(p) { var ev = d.createEvent('MouseEvents'); ev.initMouseEvent('mousedown', true, true, w, 0, 0, 0, rect.left + t.geom.pad + p[0] * t.geom.step, rect.top + t.geom.pad + p[1] * t.geom.step, false, false, false, false, 0, null); cv.dispatchEvent(ev); }
+  try {
+    w.CM.seed(11);
+    for (lv = 1; lv <= 3; lv++) {
+      for (tries = 0; tries < 4; tries++) {
+        w.CM.ui.state().g.ten.level = lv;
+        w.CM.ui.startRound('ten');
+        r = w.CM.ui.round(); q = r.qs[0]; cv = el('ten-canvas'); rect = cv.getBoundingClientRect(); t = w.CM.ui.ten();
+        ok(q.level === lv, 'レベル ' + lv);
+        /* (1) つなげない 2点（たて・よこ・ななめ でない）＝線は ふえない */
+        if (q.n >= 4) { tap([0, 0]); tap([2, 1]); ok(w.CM.segSetSig(t.set) === '', 'ななめでない 2点は 線にならない lv' + lv); el('ten-clear').click(); }
+        /* (2) わざと 1本だけ 引いて できた！＝1回目は うすい おてほん */
+        segs = w.CM.setToSegs(q.model);
+        tap(segs[0][0]); tap(segs[0][1]);
+        if (segs.length > 1) { el('ten-check').click(); ok(t.ghost === true && el('next-btn').style.display === 'none', '1回目の まちがいで おてほんが うすく出る lv' + lv); }
+        el('ten-clear').click();
+        /* (3) おてほんを なぞる＝各線分の 両端を タップ（はなしてから） */
+        for (i = 0; i < segs.length; i++) { el('ten-lift').click(); tap(segs[i][0]); tap(segs[i][1]); }
+        ok(w.CM.segSetSig(t.set) === q.modelSig, 'タップで おてほんと 同じ形 lv' + lv + ' (' + w.CM.segSetSig(t.set) + ' vs ' + q.modelSig + ')');
+        /* (4) もどす が 効く＝1本 消えて また 足すと もどる */
+        el('ten-undo').click(); ok(w.CM.segSetSig(t.set) !== q.modelSig, 'ひとつ もどす で 1本 へる lv' + lv);
+        el('ten-lift').click(); tap(segs[segs.length - 1][0]); tap(segs[segs.length - 1][1]);
+        ok(w.CM.segSetSig(t.set) === q.modelSig, 'もどして また 引くと 同じ lv' + lv);
+        el('ten-check').click();
+        msg = el('msg').textContent;
+        ok(msg.indexOf('せいかい') >= 0 && el('next-btn').style.display !== 'none', 'できた！ で せいかい lv' + lv + ' msg=' + msg);
+        el('play-back').click();
+      }
+    }
+    put('TAP checks=' + n + ' fails=' + fails.length + (fails.length ? ' ' + fails.join(' | ') : ''));
+    put(fails.length === 0 ? 'TAP=PASS' : 'TAP=FAIL');
+  } catch (e) { put('TAP=FAIL 例外 ' + e + (e && e.stack ? ' ' + e.stack : '')); }
+};
+</script>
+</body></html>

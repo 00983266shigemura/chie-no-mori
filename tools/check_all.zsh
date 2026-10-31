@@ -31,6 +31,11 @@ FIT=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-fr
 print -r -- "$FIT"
 # 合格は「FIT=PASS」だけの行（検査ページの中の文字には一致させない）
 print -r -- "$FIT" | grep -qx 'FIT=PASS' || touch "$FAILFILE"
+print "== 7/7 てんせん＝点の タップが 線になり できた！が 正解になるか（無音の複製で） =="
+TAP=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=20000 --window-size=1040,700 \
+  --dump-dom "file://$ROOT/tools/tap_check.html" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
+print -r -- "$TAP"
+print -r -- "$TAP" | grep -qx 'TAP=PASS' || touch "$FAILFILE"
 if [[ -e "$FAILFILE" ]]; then print "== けっか: FAIL =="; else print "== けっか: PASS =="; fi
 } 2>&1 | tee "$LOG"
 if [[ -e "$FAILFILE" ]]; then rm -f "$FAILFILE"; exit 1; fi
