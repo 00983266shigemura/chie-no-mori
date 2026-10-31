@@ -52,7 +52,7 @@
       lv = S.g[gid].level;
       for (i = 0; i < S.perRound; i++) { qs.push(CM.makeQuestion(gid, lv)); }
     }
-    G = { gid: gid, qs: qs, idx: 0, ok: 0, firstOk: 0, leaves: 0, tries: 0, done: false, streak: 0 };
+    G = { gid: gid, qs: qs, idx: 0, ok: 0, firstOk: 0, leaves: 0, tries: 0, done: false, streak: 0, hint: false, planned: qs.length };
     show('play');
     renderQuestion();
   }
@@ -65,13 +65,14 @@
     return [270, 270];
   }
   function paintStem(q, canvas) {
+    var h = !!(G && G.hint);
     if (q.g === 'ten') { CM.paintDotFig(canvas, q.n, q.model, {}); }
-    else if (q.g === 'kagami') { CM.paintKagamiStem(canvas, q); }
-    else if (q.g === 'kazoe') { CM.paintKazoe(canvas, q); }
-    else if (q.g === 'shiso') { CM.paintShiso(canvas, q); }
-    else if (q.g === 'tonneru') { CM.paintTonneru(canvas, q); }
+    else if (q.g === 'kagami') { CM.paintKagamiStem(canvas, q, h); }
+    else if (q.g === 'kazoe') { CM.paintKazoe(canvas, q, h); }
+    else if (q.g === 'shiso') { CM.paintShiso(canvas, q, h); }
+    else if (q.g === 'tonneru') { CM.paintTonneru(canvas, q, h); }
     else if (q.g === 'onaji') { CM.paintGridFig(canvas, q.base, 0); }
-    else if (q.g === 'kasane') { CM.paintKasaneStem(canvas, q); }
+    else if (q.g === 'kasane') { CM.paintKasaneStem(canvas, q, h); }
   }
   function paintChoice(q, i, canvas) {
     if (q.g === 'kagami' || q.g === 'kasane') { CM.paintDotFig(canvas, q.n, q.choices[i], {}); }
@@ -81,8 +82,8 @@
 
   function renderQuestion() {
     var q = G.qs[G.idx], box = el('choices'), i, c, wrap, lab, g = CM.genreById(q.g), sz = stemSize(q), stem = el('q-stem');
-    G.tries = 0; G.done = false;
-    setText(el('play-genre'), g.name + '（' + CM.LEVEL_NAME[q.level] + '）');
+    G.tries = 0; G.done = false; G.hint = false;
+    setText(el('play-genre'), g.name + '（' + CM.LEVEL_NAME[q.level] + '）' + (q.retest ? '・にた もんだい' : ''));
     setText(el('play-no'), (G.idx + 1) + ' ／ ' + G.qs.length + ' もんめ');
     setText(el('q-text'), CM.questionText(q));
     sizeCanvas(stem, sz[0], sz[1]);
@@ -124,7 +125,7 @@
     G.ok++; if (G.tries === 0) { G.firstOk++; G.streak++; } else { G.streak = 0; }
     if (G.streak >= 3) { leaves += 1; bonus = '（3もん れんぞく！ ボーナス ＋1）'; CM.snd.play('combo'); } else { CM.snd.play(G.tries === 0 ? 'ok' : 'ok2'); }
     G.leaves += leaves;
-    setText(el('msg'), 'せいかい！ はっぱ ' + leaves + 'まい ' + bonus);
+    setText(el('msg'), 'せいかい！ ' + (G.tries === 0 ? CM.praise() + '。' : 'なおせたね。') + 'はっぱ ' + leaves + 'まい ' + bonus);
     el('msg').className = 'msg good';
     el('next-btn').style.display = 'inline-block';
   }
@@ -140,29 +141,32 @@
       node.className += ' wrong';
       setText(node.getElementsByClassName('mark')[0], '！ ちがう');
       if (G.tries === 1) {
+        /* 足場 1段目＝やり方の ヒント＋見る場所を 絵で しぼる（答えは 見せない） */
         CM.snd.play('oshii');
-        setText(el('msg'), 'おしい！ ' + hintText(q));
+        G.hint = true;
+        paintStem(q, el('q-stem'));
+        if (q.g === 'onaji') { CM.paintGridFig(node.getElementsByTagName('canvas')[0], q.choices[i], 0, q.choices[q.answerIndex]); }
+        setText(el('msg'), 'おしい！ ' + CM.hintText(q));
         el('msg').className = 'msg warn';
       } else {
+        /* 足場 2段目＝解き方つきの 答え（例題）→ つぎに 同じ型の 似た問題を 1つ はさむ */
         G.done = true;
         CM.snd.play('kotae');
         nodes[q.answerIndex].className += ' right';
         setText(nodes[q.answerIndex].getElementsByClassName('mark')[0], '✓ こたえ');
-        setText(el('msg'), 'こたえは これ。' + whyText(q));
+        setText(el('msg'), 'こたえは これ。' + whyText(q) + planRetest(q));
         el('msg').className = 'msg warn';
         el('next-btn').style.display = 'inline-block';
       }
     }
   }
-  /* 1回目の まちがいの あとの ことば（考え方の ヒント） */
-  function hintText(q) {
-    if (q.g === 'kagami') { return q.axis === 'x' ? 'かがみは みぎと ひだりが いれかわるよ' : 'みずうみは うえと したが いれかわるよ'; }
-    if (q.g === 'kazoe') { return 'ひだりうえから じゅんばんに、' + CM.SHAPE_NAMES[q.target] + ' だけを かぞえてね'; }
-    if (q.g === 'shiso') { return 'さがっている ほうが おもいよ。ぜんぶの シーソーを 見てね'; }
-    if (q.g === 'tonneru') { return 'おやくそくで、トンネルを とおると いくつ ふえるか へるかを たしかめてね'; }
-    if (q.g === 'onaji') { return q.rot === 0 ? 'しるしの ばしょと むきを 1つずつ くらべてね' : 'あたまの なかで まわして、しるしの ならびを くらべてね'; }
-    if (q.g === 'kasane') { return 'かみに ある せんを ぜんぶ あわせると どうなるかな'; }
-    return 'もういちど よく見てね';
+  /* 2回目の まちがいの あと＝同じ型・同じレベルの 似た問題を すぐ 1つ 足す（1問に つき 1回まで） */
+  function planRetest(q) {
+    var nq;
+    if (q.retest) { return ''; }
+    nq = CM.makeQuestion(q.g, q.level); nq.retest = true;
+    G.qs.splice(G.idx + 1, 0, nq);
+    return ' つぎは にた もんだいで もういちど。';
   }
   function whyText(q) {
     if (q.g === 'kazoe') { return CM.SHAPE_NAMES[q.target] + ' は ' + q.answer + 'こ あったよ'; }
@@ -221,15 +225,15 @@
     G.tries++; G.streak = 0;
     if (G.tries === 1) {
       CM.snd.play('oshii');
-      T.ghost = true; paintTen();
-      setText(el('msg'), 'おしい！ うすい いろが おてほん。ちがう ところを なおしてね');
+      T.ghost = true; G.hint = true; paintTen();
+      setText(el('msg'), 'おしい！ ' + CM.hintText(q));
       el('msg').className = 'msg warn';
     } else {
       G.done = true; CM.snd.play('kotae');
       T.set = {}; T.cur = null; T.ghost = false;
       for (k in q.model) { if (q.model.hasOwnProperty(k)) { T.set[k] = q.model[k]; } }
       paintTen();
-      setText(el('msg'), 'こたえは これ。はじめの てんの ばしょを よく見てね');
+      setText(el('msg'), 'こたえは これ。はじめの てんの ばしょを よく見てね。' + planRetest(q));
       el('msg').className = 'msg warn';
       el('next-btn').style.display = 'inline-block';
     }

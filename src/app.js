@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 1;
+  CM.APP_VERSION = 2;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
@@ -448,6 +448,26 @@
   }
   CM.questionText = questionText;
 
+  /* ================= わからないときの 支え（足場かけ・学習理論に基づく 3段） =================
+     0 まず 自分で 答える（取り出し練習・生産的失敗）
+     1 1回目の まちがい＝「やり方」の ヒント（手順の言葉＋見る場所を 絵で しぼる。答えは 見せない）
+     2 2回目の まちがい＝解き方つきの 答え（例題）→ すぐ 同じ型の 似た問題を もう1問（例題のあとの 練習）
+     ほめ言葉＝「やり方」を ほめる（能力でなく 過程・Dweck の process praise） */
+  var PRAISE = ['よく 見くらべたね', 'じゅんばんに 見たね', 'さいごまで たしかめたね', 'おちついて えらべたね', 'ていねいに やったね'];
+  CM.praise = function () { return pick(PRAISE); };
+  /* ヒントの 言葉（型ごとの「手順」） */
+  function hintText(q) {
+    if (q.g === 'ten') { return 'うすい いろが おてほん。はじめの てんの ばしょから あわせてね'; }
+    if (q.g === 'kagami') { return q.axis === 'x' ? 'かがみは みぎと ひだりが いれかわるよ。だいだいの せんが どこへ うつるか さがしてね' : 'みずうみは うえと したが いれかわるよ。だいだいの せんが どこへ うつるか さがしてね'; }
+    if (q.g === 'kazoe') { return 'うえの だんから じゅんばんに、' + SHAPE_NAMES[q.target] + ' だけを ゆびで さして かぞえてね'; }
+    if (q.g === 'shiso') { return 'さがっている ほう（まるで かこんだ ほう）が おもいよ。ぜんぶの シーソーを つなげて かんがえてね'; }
+    if (q.g === 'tonneru') { return 'トンネルの よこに、ふえる かず・へる かずを かいたよ。じゅんばんに たして ひいてね'; }
+    if (q.g === 'onaji') { return 'まるで かこんだ ますが ちがうよ。しるしの ばしょと むきを 1つずつ くらべてね'; }
+    if (q.g === 'kasane') { return 'みぎはしに、さいごの 1まい いがいを かさねた かたちを だしたよ。あと 1まいを たしてね'; }
+    return 'もういちど よく見てね';
+  }
+  CM.hintText = hintText;
+
   /* ================= 絵を 描く ================= */
   function setupCanvas(canvas) {
     var css = canvas.clientWidth || parseInt(canvas.getAttribute('width'), 10) || 120, dpr = global.devicePixelRatio || 1, ctx, px = Math.round(css * dpr), h = canvas.clientHeight || css, py = Math.round(h * dpr);
@@ -470,11 +490,17 @@
   }
   CM.paintDotFig = paintDotFig;
   /* かがみ の もと＝右（または 下）に 鏡の線 */
-  function paintKagamiStem(canvas, q) {
-    var c = setupCanvas(canvas), s = Math.min(c.w, c.h) * 0.86, m;
+  function paintKagamiStem(canvas, q, hint) {
+    var c = setupCanvas(canvas), s = Math.min(c.w, c.h) * 0.86, m, first, ghost;
     paper(c.ctx, c.w, c.h);
     c.ctx.save(); c.ctx.translate(q.axis === 'x' ? 2 : (c.w - s) / 2, q.axis === 'x' ? (c.h - s) / 2 : 2);
     m = drawDots(c.ctx, q.n, s, q.model, {});
+    if (hint) {
+      /* 足場＝1ぽんめだけ うつした線を うすく 見せる（例題の 一部＝完成問題） */
+      first = setToSegs(q.model)[0];
+      ghost = {}; ghost[segKey(first[0], first[1])] = first;
+      drawDots(c.ctx, q.n, s, ghost, { color: COL.daidai, lw: Math.max(5, s * 0.045), dots: false });
+    }
     c.ctx.restore();
     c.ctx.setLineDash && c.ctx.setLineDash([8, 6]);
     if (q.axis === 'x') { line(c.ctx, s + 6, 8, s + 6, c.h - 8, COL.ao, 5); } else { line(c.ctx, 8, s + 6, c.w - 8, s + 6, COL.ao, 5); }
@@ -483,9 +509,14 @@
   }
   CM.paintKagamiStem = paintKagamiStem;
   /* かぞえる の ばらばらの かたち */
-  function paintKazoe(canvas, q) {
+  function paintKazoe(canvas, q, hint) {
     var c = setupCanvas(canvas), i, it, r = Math.min(c.w, c.h) * 0.045;
     paper(c.ctx, c.w, c.h);
+    if (hint) {
+      /* 足場＝だんに 分ける うすい線と 左→右の うすい やじるし（「数える方向を 決める」） */
+      for (i = 1; i < 5; i++) { line(c.ctx, 8, c.h * i / 5, c.w - 8, c.h * i / 5, '#f3c98a', 2); }
+      for (i = 0; i < 5; i++) { line(c.ctx, 10, c.h * (i + 0.1) / 5, 40, c.h * (i + 0.1) / 5, COL.daidai, 2); poly(c.ctx, [[46, c.h * (i + 0.1) / 5], [38, c.h * (i + 0.1) / 5 - 5], [38, c.h * (i + 0.1) / 5 + 5]], COL.daidai, COL.daidai, 1); }
+    }
     for (i = 0; i < q.items.length; i++) {
       it = q.items[i];
       c.ctx.save(); c.ctx.translate(it.x * c.w, it.y * c.h); drawShape(c.ctx, it.kind, r); c.ctx.restore();
@@ -499,7 +530,7 @@
   }
   CM.paintShape = paintShape;
   /* シーソー ぜんぶ（たてに ならべる） */
-  function paintShiso(canvas, q) {
+  function paintShiso(canvas, q, hint) {
     var c = setupCanvas(canvas), i, p, rowH = c.h / q.pairs.length, cx = c.w / 2, half = c.w * 0.36, tilt = 0.2, cy, r = Math.min(rowH * 0.22, c.w * 0.08), dx, dy;
     paper(c.ctx, c.w, c.h);
     for (i = 0; i < q.pairs.length; i++) {
@@ -511,6 +542,11 @@
       dx = half * 0.86;
       c.ctx.save(); c.ctx.translate(cx - dx, cy + dy * 0.86 - r * 1.3); drawShape(c.ctx, p.left, r); c.ctx.restore();
       c.ctx.save(); c.ctx.translate(cx + dx, cy - dy * 0.86 - r * 1.3); drawShape(c.ctx, p.right, r); c.ctx.restore();
+      if (hint) {
+        /* 足場＝さがっている 側（おもい 側）を 輪で かこむ */
+        c.ctx.save(); c.ctx.translate(p.down === 'left' ? cx - dx : cx + dx, (p.down === 'left' ? cy + dy : cy - dy) * 0.86 + (p.down === 'left' ? cy : cy) * 0.14 - r * 1.3);
+        circle(c.ctx, 0, 0, r * 1.7, null, COL.daidai, 4); c.ctx.restore();
+      }
     }
   }
   CM.paintShiso = paintShiso;
@@ -530,8 +566,9 @@
     ctx.translate(x + w / 4 + h / 6, y); drawShape(ctx, kind, h * 0.2);
     ctx.restore();
   }
-  function paintTonneru(canvas, q) {
-    var c = setupCanvas(canvas), i, rows = q.rules.length + 1, rowH = c.h / rows, y, r = Math.min(rowH * 0.11, c.w * 0.028), ex, tw = c.w * 0.2, th = rowH * 0.62, x, step;
+  function paintTonneru(canvas, q, hint) {
+    var c = setupCanvas(canvas), i, rows = q.rules.length + 1, rowH = c.h / rows, y, r = Math.min(rowH * 0.11, c.w * 0.028), ex, tw = c.w * 0.2, th = rowH * 0.62, x, step, d;
+    function delta(dx, dy, k) { d = q.rules[k].delta; c.ctx.save(); c.ctx.fillStyle = COL.daidai; c.ctx.font = 'bold ' + Math.round(rowH * 0.26) + 'px sans-serif'; c.ctx.fillText((d > 0 ? '+' : '−') + Math.abs(d), dx, dy); c.ctx.restore(); }
     paper(c.ctx, c.w, c.h);
     c.ctx.font = 'bold ' + Math.round(rowH * 0.3) + 'px sans-serif'; c.ctx.textAlign = 'center'; c.ctx.textBaseline = 'middle';
     function arrow(ax, ay) { line(c.ctx, ax - rowH * 0.16, ay, ax + rowH * 0.12, ay, COL.sumi, 3); poly(c.ctx, [[ax + rowH * 0.2, ay], [ax + rowH * 0.06, ay - rowH * 0.09], [ax + rowH * 0.06, ay + rowH * 0.09]], COL.sumi, COL.sumi, 1); }
@@ -541,6 +578,7 @@
       drawBalls(c.ctx, c.w * 0.17, y, ex.inN, r);
       arrow(c.w * 0.35, y);
       drawTunnel(c.ctx, c.w * 0.5, y, tw, th, q.rules[ex.box].kind);
+      if (hint) { delta(c.w * 0.5, y - th * 0.72, ex.box); }   /* 足場＝例から 読み取る 規則を 数で */
       arrow(c.w * 0.65, y);
       drawBalls(c.ctx, c.w * 0.83, y, ex.outN, r);
     }
@@ -552,6 +590,7 @@
       x = 20 + step * (i + 1.5);
       arrow(x - step / 2, y);
       drawTunnel(c.ctx, x, y, Math.min(tw, step * 0.7), th, q.rules[q.chain[i]].kind);
+      if (hint) { delta(x, y - th * 0.72, q.chain[i]); }
     }
     x = 20 + step * (q.chain.length + 1.5);
     arrow(x - step / 2, y);
@@ -572,8 +611,8 @@
     else if (m === 'sen') { ctx.save(); ctx.rotate(o * Math.PI / 2); ctx.strokeStyle = COL.sumi; ctx.lineWidth = Math.max(3, s * 0.12); ctx.beginPath(); ctx.moveTo(-h * 1.1, 0); ctx.lineTo(h * 1.1, 0); ctx.stroke(); ctx.restore(); }
   }
   CM.drawMark = drawMark;
-  function paintGridFig(canvas, fig, extraRot) {
-    var c = setupCanvas(canvas), s = Math.min(c.w, c.h) * 0.8, n = fig.n, cs = s / n, i, cell;
+  function paintGridFig(canvas, fig, extraRot, diffWith) {
+    var c = setupCanvas(canvas), s = Math.min(c.w, c.h) * 0.8, n = fig.n, cs = s / n, i, cell, mine, theirs, r, cc;
     paper(c.ctx, c.w, c.h);
     c.ctx.translate(c.w / 2, c.h / 2); c.ctx.rotate(extraRot || 0);
     c.ctx.strokeStyle = COL.usui; c.ctx.lineWidth = 1.5;
@@ -582,12 +621,28 @@
     for (i = 0; i < fig.cells.length; i++) {
       cell = fig.cells[i]; c.ctx.save(); c.ctx.translate(-s / 2 + cs * (cell.c + 0.5), -s / 2 + cs * (cell.r + 0.5)); drawMark(c.ctx, cell.m, cell.o, cs); c.ctx.restore();
     }
+    if (diffWith) {
+      /* 足場＝正解の かたち（diffWith）と ちがう ますを 輪で かこむ */
+      mine = {}; theirs = {};
+      for (i = 0; i < fig.cells.length; i++) { mine[fig.cells[i].r + ',' + fig.cells[i].c] = fig.cells[i].m + fig.cells[i].o; }
+      for (i = 0; i < diffWith.cells.length; i++) { theirs[diffWith.cells[i].r + ',' + diffWith.cells[i].c] = diffWith.cells[i].m + diffWith.cells[i].o; }
+      for (r = 0; r < n; r++) { for (cc = 0; cc < n; cc++) { if ((mine[r + ',' + cc] || '') !== (theirs[r + ',' + cc] || '')) { circle(c.ctx, -s / 2 + cs * (cc + 0.5), -s / 2 + cs * (r + 0.5), cs * 0.46, null, COL.daidai, 4); } } }
+    }
   }
   CM.paintGridFig = paintGridFig;
   /* かさねる＝3まいを よこに ならべて ＋ で つなぐ */
-  function paintKasaneStem(canvas, q) {
-    var c = setupCanvas(canvas), k = q.sheets.length, s = Math.min(c.h * 0.9, (c.w - 20 * (k - 1)) / k), i, x0 = (c.w - (s * k + 20 * (k - 1))) / 2;
+  function paintKasaneStem(canvas, q, hint) {
+    var c = setupCanvas(canvas), k = q.sheets.length, cols = hint ? k + 1 : k, s = Math.min(c.h * 0.9, (c.w - 20 * (cols - 1)) / cols), i, x0 = (c.w - (s * cols + 20 * (cols - 1))) / 2, part, key;
     paper(c.ctx, c.w, c.h);
+    if (hint) {
+      /* 足場＝さいごの 1まい いがいを かさねた 途中の形（完成問題＝あと1まい） */
+      part = {};
+      for (i = 0; i < k - 1; i++) { for (key in q.sheets[i]) { if (q.sheets[i].hasOwnProperty(key)) { part[key] = q.sheets[i][key]; } } }
+      c.ctx.save(); c.ctx.translate(x0 + k * (s + 20), (c.h - s) / 2);
+      c.ctx.strokeStyle = COL.daidai; c.ctx.lineWidth = 3; c.ctx.strokeRect(0, 0, s, s);
+      drawDots(c.ctx, q.n, s, part, { color: COL.daidai });
+      c.ctx.restore();
+    }
     c.ctx.font = 'bold ' + Math.round(s * 0.3) + 'px sans-serif'; c.ctx.fillStyle = COL.sumi; c.ctx.textAlign = 'center'; c.ctx.textBaseline = 'middle';
     for (i = 0; i < k; i++) {
       c.ctx.save(); c.ctx.translate(x0 + i * (s + 20), (c.h - s) / 2);

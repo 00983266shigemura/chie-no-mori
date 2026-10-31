@@ -32,15 +32,24 @@ document.getElementById('f').onload = function () {
     for (k in q.model) { if (q.model.hasOwnProperty(k)) { t.set[k] = q.model[k]; } }
     el('ten-check').click();
   }
-  function answerOne(wrong) {
-    var r = w.CM.ui.round(), q = r.qs[r.idx], ch, k;
+  /* mode 0＝1回で正解 1＝1回まちがえて 正解 2＝2回 まちがえる（答えが 出て、にた もんだいが はさまる） */
+  function answerOne(mode, gid) {
+    var r = w.CM.ui.round(), q = r.qs[r.idx], ch, k, t, segs, wrongs = [];
     if (q.kind === 'tap') {
-      if (wrong) { el('ten-check').click(); }           /* なにも かかずに できた！＝ことばだけ */
+      if (mode >= 1) {
+        t = w.CM.ui.ten(); segs = w.CM.setToSegs(q.model);
+        t.set[w.CM.segKey(segs[0][0], segs[0][1])] = segs[0];   /* 1本だけ＝たりない */
+        el('ten-check').click();
+        if (meas('hint' + gid)) { stop(); }
+        if (mode === 2) { el('ten-check').click(); return; }
+      }
       solveTen();
       return;
     }
     ch = el('choices').getElementsByClassName('choice');
-    if (wrong) { for (k = 0; k < ch.length; k++) { if (k !== q.answerIndex) { ch[k].click(); break; } } }
+    for (k = 0; k < ch.length; k++) { if (k !== q.answerIndex) { wrongs.push(k); } }
+    if (mode >= 1) { ch[wrongs[0]].click(); if (meas('hint' + gid)) { stop(); } }
+    if (mode === 2) { ch[wrongs[1]].click(); return; }
     ch[q.answerIndex].click();
   }
   try {
@@ -49,14 +58,18 @@ document.getElementById('f').onload = function () {
     var gids = ['ten', 'kagami', 'kazoe', 'shiso', 'tonneru', 'onaji', 'kasane', 'mix'], gi, q, r;
     for (gi = 0; gi < gids.length; gi++) {
       w.CM.ui.startRound(gids[gi]);
-      for (q = 0; q < 5; q++) {
+      /* 2回目の まちがいの あとは「にた もんだい」が 1つ はさまる＝けっかの 画面が 出るまで 回す（最大 20問） */
+      for (q = 0; q < 20 && el('scr-result').style.display === 'none'; q++) {
         if (meas('play' + gids[gi])) { stop(); }
-        answerOne(q % 2 === 1);
+        answerOne(q === 1 ? 1 : (q === 3 ? 2 : 0), gids[gi]);
         played++;
         if (el('next-btn').style.display === 'none') { errs.push(gids[gi] + ' ' + q + ' つぎへ が 出ない'); el('next-btn').style.display = 'inline-block'; }
         if (meas('ans' + gids[gi])) { stop(); }
         el('next-btn').click();
       }
+      r = w.CM.ui.round();
+      if (r.qs.length !== r.planned + 1) { errs.push(gids[gi] + ' にた もんだいの 数が ちがう ' + r.qs.length + ' vs ' + (r.planned + 1)); }
+      if (!r.qs[4].retest || r.qs[4].g !== r.qs[3].g || r.qs[4].level !== r.qs[3].level) { errs.push(gids[gi] + ' にた もんだいが 同じ型・同じレベルでない'); }
       if (meas('result' + gids[gi])) { stop(); }
       el('res-home').click();
     }
@@ -71,7 +84,7 @@ document.getElementById('f').onload = function () {
       put('ERRS=' + errs.length + (errs.length ? ' ' + errs.join(' | ') : ''));
       var asked = w.__audioAsked, silent = (typeof asked === 'number' && asked > 0 && w.CM.snd.ctx === null);
       put('AUDIO asked=' + asked + ' ctx=' + (w.CM.snd.ctx === null ? 'なし' : 'あり') + ' → ' + (silent ? '無音' : '無音でない'));
-      put(fails.length === 0 && errs.length === 0 && silent && played === 40 ? 'FIT=PASS' : 'FIT=FAIL ' + (silent ? '' : '無音化が効いていない ') + fails.slice(0, 12).join(' / '));
+      put(fails.length === 0 && errs.length === 0 && silent && played === 48 ? 'FIT=PASS' : 'FIT=FAIL played=' + played + ' ' + (silent ? '' : '無音化が効いていない ') + fails.slice(0, 12).join(' / ') + ' ' + errs.slice(0, 6).join(' | '));
     }, 1500);
   } catch (e) {
     if (e === 'shot') { put('SHOT=' + shot); document.getElementById('out').style.display = 'none'; }
