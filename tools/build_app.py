@@ -56,6 +56,13 @@ def main():
     # 絵は 66枚そろっていること（1枚でも欠けると 問題が作れない）
     if len(imgs) != 66:
         sys.exit('✕ img/ の絵が 66枚ではありません（%d枚）' % len(imgs))
+    zdir = os.path.join(ROOT, 'img', 'zukan')
+    zimgs = sorted('zukan/' + f for f in os.listdir(zdir) if f.endswith('.png')) if os.path.isdir(zdir) else []
+    # ずかん の絵は 44枚（app.js の ZUKAN_IMGS と同じ数）
+    n_z = len(re.findall(r"\['[a-z_]+', '[^']+'\]", app.split('var ZUKAN_IMGS')[1].split('];')[0])) if 'var ZUKAN_IMGS' in app else 0
+    if len(zimgs) != n_z:
+        sys.exit('✕ img/zukan/ の絵（%d枚）と app.js の ZUKAN_IMGS（%d）が合いません' % (len(zimgs), n_z))
+    imgs = imgs + zimgs
     manifest = (
         'CACHE MANIFEST\n'
         '# ちえの もり はんすう %d\n'

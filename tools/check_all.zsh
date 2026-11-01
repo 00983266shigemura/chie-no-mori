@@ -31,6 +31,7 @@ print -r -- "$RESULT" | head -1 | grep -q '^PASS=[0-9]* FAIL=0$' || touch "$FAIL
 print "== 6/6 iPad よこおきで 1がめんに おさまるか（1024×640・ぜんぶの がめん・無音の複製で） =="
 /usr/bin/python3 "$ROOT/tools/mkpage.py" --selftest || touch "$FAILFILE"
 /usr/bin/python3 "$ROOT/tools/mkpage.py" || touch "$FAILFILE"
+rm -rf "$ROOT/logs/img"; cp -R "$ROOT/img" "$ROOT/logs/img" || touch "$FAILFILE"   # 無音の複製から 絵が 見えるように（logs は git に載せない）
 FIT=$("$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=20000 \
   --dump-dom "file://$ROOT/tools/fit_check.html#size=1024x640" 2>/dev/null | sed -n '/<pre id="out">/,/<\/pre>/p' | sed -e 's/<pre id="out">//' -e 's/<\/pre>//')
 print -r -- "$FIT"

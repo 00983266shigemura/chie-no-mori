@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 5;
+  CM.APP_VERSION = 6;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
@@ -1055,6 +1055,43 @@
       ellipse(ctx, 0, 2, 5, 22, COL.sumi); line(ctx, -2, -20, -10, -34, COL.sumi, 2); line(ctx, 2, -20, 10, -34, COL.sumi, 2);
     } }
   ];
+  /* 9つ目から＝ChatGPT の絵（img/zukan/<id>.png・甲虫44種）。絵は 読めたら 描く。読めるまでは たまごの印 */
+  var ZUKAN_IMGS = [
+    ['herakuresu_ookabuto', 'ヘラクレスオオカブト'], ['kookasasu_ookabuto', 'コーカサスオオカブト'], ['atorasu_ookabuto', 'アトラスオオカブト'], ['neputyuun_ookabuto', 'ネプチューンオオカブト'], ['satan_ookabuto', 'サタンオオカブト'],
+    ['guranto_shirokabuto', 'グラントシロカブト'], ['gohonzuno_kabuto', 'ゴホンヅノカブト'], ['akuteon_zoukabuto', 'アクティオンゾウカブト'], ['kentaurusu_ookabuto', 'ケンタウルスオオカブト'], ['sai_kabuto', 'サイカブト'],
+    ['nokogiri_kuwagata', 'ノコギリクワガタ'], ['ookuwagata', 'オオクワガタ'], ['miyama_kuwagata', 'ミヤマクワガタ'], ['kokuwagata', 'コクワガタ'], ['hirata_kuwagata', 'ヒラタクワガタ'],
+    ['akaashi_kuwagata', 'アカアシクワガタ'], ['suji_kuwagata', 'スジクワガタ'], ['girafa_nokogiri', 'ギラファノコギリクワガタ'], ['nijiiro_kuwagata', 'ニジイロクワガタ'], ['tarandusu_ootsuya', 'タランドゥスオオツヤクワガタ'],
+    ['parawan_oohirata', 'パラワンオオヒラタクワガタ'], ['sumatora_oohirata', 'スマトラオオヒラタクワガタ'], ['ougon_oni_kuwagata', 'オウゴンオニクワガタ'], ['erafusu_hosoaka', 'エラフスホソアカクワガタ'], ['mengata_kuwagata', 'メンガタクワガタ'],
+    ['mandiburarisu_futamata', 'マンディブラリスフタマタクワガタ'], ['antaeusu_ookuwagata', 'アンタエウスオオクワガタ'], ['yooroppa_miyama', 'ヨーロッパミヤマクワガタ'], ['rakodaaru_tsuya', 'ラコダールツヤクワガタ'],
+    ['goraiasu_ootsunohanamuguri', 'ゴライアスオオツノハナムグリ'], ['tenaga_kogane', 'テナガコガネ'], ['kanabun', 'カナブン'], ['yamato_tamamushi', 'ヤマトタマムシ'], ['gengorou', 'ゲンゴロウ'],
+    ['genji_botaru', 'ゲンジボタル'], ['gomadara_kamikiri', 'ゴマダラカミキリ'], ['ruriboshi_kamikiri', 'ルリボシカミキリ'], ['oo_osamushi', 'オオオサムシ'], ['hanmyou', 'ハンミョウ'],
+    ['midori_senchikogane', 'ミドリセンチコガネ'], ['daikoku_kogane', 'ダイコクコガネ'], ['sukarabe', 'スカラベ'], ['oozoumushi', 'オオゾウムシ'], ['mizusumashi', 'ミズスマシ']
+  ];
+  var ZIMG = {};
+  CM.onImgReady = null;
+  function zimg(id) {
+    var im;
+    if (!ZIMG[id]) {
+      im = new global.Image();
+      im.onload = function () { if (CM.onImgReady) { try { CM.onImgReady(id); } catch (e) { /* 描き直しは 任意 */ } } };
+      im.src = 'img/zukan/' + id + '.png';
+      ZIMG[id] = im;
+    }
+    return ZIMG[id];
+  }
+  CM.preloadZukan = function () { var i; for (i = 0; i < ZUKAN_IMGS.length; i++) { zimg(ZUKAN_IMGS[i][0]); } };
+  function drawZukanImg(ctx, id) {
+    var im = zimg(id);
+    if (im.complete && im.naturalWidth > 0) { ctx.drawImage(im, -50, -50, 100, 100); }
+    else { circle(ctx, 0, 0, 36, COL.kami, COL.sumi, 2.5); ctx.fillStyle = COL.sumi; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', 0, 2); }
+  }
+  (function () {
+    var i;
+    for (i = 0; i < ZUKAN_IMGS.length; i++) {
+      PICS.push({ id: ZUKAN_IMGS[i][0], name: ZUKAN_IMGS[i][1], img: true, draw: (function (id) { return function (ctx) { drawZukanImg(ctx, id); }; })(ZUKAN_IMGS[i][0]) });
+    }
+  })();
+  CM.ZUKAN_IMGS = ZUKAN_IMGS;
   CM.PICS = PICS;
   var PIC_BY_ID = {};
   (function () { var i; for (i = 0; i < PICS.length; i++) { PIC_BY_ID[PICS[i].id] = PICS[i]; } })();

@@ -370,17 +370,21 @@
     /* うまれた ときは その場で 大きく 見せる（ずかんに 入った絵＝けっかの 画面で すぐ 見える） */
     el('res-card').className = 'res' + (adultId ? ' born' : '');
     sizeCanvas(el('res-egg'), adultId ? 200 : 150, adultId ? 200 : 150);
-    if (adultId) { CM.paintStage(el('res-egg'), 3, adultId); }
-    else { CM.paintStage(el('res-egg'), CM.stageOf(S.cLeaves), CM.PICS[S.cIndex % CM.PICS.length].id); }
+    lastRes = adultId ? { stage: 3, id: adultId } : { stage: CM.stageOf(S.cLeaves), id: CM.PICS[S.cIndex % CM.PICS.length].id };
+    CM.paintStage(el('res-egg'), lastRes.stage, lastRes.id);
     stopTimer();
     show('result');
   }
 
   /* ================= ずかん ================= */
+  /* ずかん＝1ページ 10ひき（よこおき 1画面に おさめる）。まえ・つぎ で めくる */
+  var Z = { page: 0, per: 10 };
   function renderZukan() {
-    var box = el('zukan-list'), i, pic, card, c, got, cv;
+    var box = el('zukan-list'), i, pic, card, c, got, cv, pages = Math.ceil(CM.PICS.length / Z.per), from, to;
+    if (Z.page < 0) { Z.page = 0; } if (Z.page > pages - 1) { Z.page = pages - 1; }
+    from = Z.page * Z.per; to = Math.min(CM.PICS.length, from + Z.per);
     box.innerHTML = '';
-    for (i = 0; i < CM.PICS.length; i++) {
+    for (i = from; i < to; i++) {
       pic = CM.PICS[i];
       got = 0; for (c = 0; c < S.zukan.length; c++) { if (S.zukan[c] === pic.id) { got++; } }
       card = doc.createElement('div'); card.className = 'zcard' + (got ? '' : ' none');
@@ -389,7 +393,17 @@
       box.appendChild(card);
       CM.paintStage(cv, got ? 3 : 0, pic.id);
     }
+    setText(el('zukan-page'), (Z.page + 1) + ' ／ ' + pages + ' ページ（' + S.zukan.length + '／' + CM.PICS.length + ' ひき）');
+    el('zukan-prev').style.visibility = Z.page > 0 ? 'visible' : 'hidden';
+    el('zukan-next').style.visibility = Z.page < pages - 1 ? 'visible' : 'hidden';
   }
+  /* 絵が 読めたら、いま 見えている 画面を 描き直す */
+  var lastRes = null;
+  CM.onImgReady = function () {
+    if (screen === 'zukan') { renderZukan(); }
+    else if (screen === 'result' && lastRes) { CM.paintStage(el('res-egg'), lastRes.stage, lastRes.id); }
+    else if (screen === 'home') { renderHome(); }
+  };
 
   /* ================= おとなのひと ================= */
   function renderGrown() {
@@ -452,7 +466,10 @@
       var t = ev.target, n = 0;
       while (t && n < 4) { if (t.getAttribute && t.getAttribute('data-g')) { startRound(t.getAttribute('data-g')); return; } t = t.parentNode; n++; }
     }, false);
-    on('zukan-btn', function () { renderZukan(); show('zukan'); });
+    on('zukan-btn', function () { Z.page = 0; renderZukan(); show('zukan'); });
+    on('zukan-prev', function () { Z.page--; renderZukan(); });
+    on('zukan-next', function () { Z.page++; renderZukan(); });
+    CM.preloadZukan();
     on('zukan-back', function () { renderHome(); show('home'); });
     on('play-back', function () { stopTimer(); try { global.speechSynthesis && global.speechSynthesis.cancel(); } catch (e) { /* なくても */ } renderHome(); show('home'); });
     on('story-say', function () { CM.snd.say(G.qs[G.idx].storyText); });

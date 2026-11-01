@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!-- ちえの もり ── ずかん の 見た目の 撮影用（CCが目で確かめる・無音の複製で）
+     #zukan2 ＝ 2ページ目（甲虫の絵が 読めているか）  #born ＝ 9ひき目が うまれた けっかの 画面 -->
+<html lang="ja"><head><meta charset="utf-8"><title>zukan probe</title></head>
+<body style="margin:0">
+<iframe id="f" src="../logs/silent_index.html" style="width:1024px;height:640px;border:0;display:block"></iframe>
+<script>
+document.getElementById('f').onload = function () {
+  var w = this.contentWindow, d = w.document, S = w.CM.ui.state(), i, r, q, ch, mode = (location.hash.match(/#(\w+)/) || [])[1] || 'zukan2';
+  function el(id) { return d.getElementById(id); }
+  w.CM.seed(9);
+  if (mode === 'zukan2') {
+    for (i = 8; i < 14; i++) { S.zukan.push(w.CM.PICS[i].id); }
+    el('zukan-btn').click(); el('zukan-next').click();
+  } else {
+    S.cIndex = 8; S.cLeaves = 23;   /* つぎの 1まいで 9ひき目（ヘラクレスオオカブト）が うまれる */
+    w.CM.ui.setTimer(false);
+    S.g.kisetsu.level = 1; w.CM.ui.startRound('kisetsu');
+    for (i = 0; i < 20 && el('scr-result').style.display === 'none'; i++) {
+      r = w.CM.ui.round(); q = r.qs[r.idx]; ch = el('choices').getElementsByClassName('choice');
+      ch[q.answerIndex].click(); el('next-btn').click();
+    }
+  }
+  w.setTimeout(function () { w.CM.onImgReady && w.CM.onImgReady(); }, 800);
+};
+</script>
+</body></html>
