@@ -12,6 +12,9 @@ document.getElementById('f').onload = function () {
   if (mode === 'zukan2') {
     for (i = 8; i < 14; i++) { S.zukan.push(w.CM.PICS[i].id); }
     el('zukan-btn').click(); el('zukan-next').click();
+  } else if (mode === 'all') {
+    /* おとなのひと の「ぜんぶ みる」＝記録を 変えずに 3ページ目を 見る */
+    el('grown-zukan-all').click(); el('zukan-next').click(); el('zukan-next').click();
   } else {
     S.cIndex = 8; S.cLeaves = 23;   /* つぎの 1まいで 9ひき目（ヘラクレスオオカブト）が うまれる */
     w.CM.ui.setTimer(false);
