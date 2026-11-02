@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 8;
+  CM.APP_VERSION = 9;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
