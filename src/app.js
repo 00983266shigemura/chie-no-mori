@@ -18,7 +18,7 @@
 
   var CM = {};
   /* このファイルを直したら この数字を +1 する。version.txt にも同じ数字を書く（build_app.py が照合する） */
-  CM.APP_VERSION = 7;
+  CM.APP_VERSION = 8;
   CM.SCHEMA = 1;
   CM.STORE_KEY = 'chie_no_mori_v1';
 
@@ -917,11 +917,48 @@
     combo: [['C6', 0, 0.07, 0.5, 'square'], ['E6', 0.07, 0.07, 0.5, 'square'], ['G6', 0.14, 0.07, 0.5, 'square'], ['C7', 0.21, 0.07, 0.5, 'square'], ['E6', 0.3, 0.2, 0.45, 'triangle'], ['G6', 0.3, 0.2, 0.45, 'triangle'], ['C7', 0.3, 0.3, 0.45, 'triangle']]
   };
   CM.SOUNDS = SOUNDS;
-  var snd = { ctx: null, on: true, vol: 0.22 };
+  var snd = { ctx: null, on: true, vol: 0.22, keep: null };
   CM.snd = snd;
   function audioClass() { return global.AudioContext || global.webkitAudioContext || null; }
+  /* 音の ない 短い WAV（8000Hz・16bit・0.25びょう）。消音スイッチ対策の ために ながしつづける（こころの じゅんび と 同じ） */
+  function silentWav() {
+    var n = 2000, len = n * 2, h, i;
+    function u32(v) { return String.fromCharCode(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >> 24) & 255); }
+    function u16(v) { return String.fromCharCode(v & 255, (v >> 8) & 255); }
+    h = 'RIFF' + u32(36 + len) + 'WAVE' + 'fmt ' + u32(16) + u16(1) + u16(1) + u32(8000) + u32(16000) + u16(2) + u16(16) + 'data' + u32(len);
+    for (i = 0; i < len; i++) { h += String.fromCharCode(0); }
+    return 'data:audio/wav;base64,' + global.btoa(h);
+  }
+  CM.silentWav = silentWav;
+  /* 音の しくみが 止まっていたら 起こしなおす（K4）。iPad は 画面を 消したり ほかの アプリへ 行くと 止まる。
+     鳴らす 入口で 毎回 見る（とまっていなければ 何もしない）。失敗しても 止まらない */
+  function wake(ctx) {
+    var p;
+    try {
+      if (ctx && ctx.state && ctx.state !== 'running' && ctx.resume) {
+        p = ctx.resume();
+        if (p && typeof p.then === 'function') { p.then(function () {}, function () {}); }
+        return true;
+      }
+    } catch (e) { /* 鳴らなくても つかえる */ }
+    return false;
+  }
+  CM.wakeAudio = wake;
+  /* さいしょの タッチで 音の しくみを おこす（iOS 10 は タッチの 中で ないと 鳴らない）。
+     iPad の 消音（よこの スイッチ・コントロールセンター）が 入って いると、合成の 音（Web Audio）だけ 消される。
+     音の ない audio を 1つ ながしつづけると、ページが「再生」あつかいに なり、合成の 音も 鳴る（推定・実機で 確かめる） */
   snd.unlock = function () {
-    var AC, b, src;
+    var AC, b, src, a;
+    try {
+      if (!snd.keep && global.Audio) {
+        a = new global.Audio(); a.src = silentWav(); a.loop = true;
+        snd.keep = a;
+      }
+      if (snd.keep && snd.on && snd.keep.paused) {
+        b = snd.keep.play();
+        if (b && typeof b.then === 'function') { b.then(function () {}, function () {}); }   /* 鳴らせない ときの 知らせを 受けとめて おく */
+      }
+    } catch (e0) { /* 鳴らなくても つかえる */ }
     try {
       if (!snd.ctx) {
         AC = audioClass(); if (!AC) { return false; }
@@ -930,7 +967,7 @@
         src = snd.ctx.createBufferSource(); src.buffer = b; src.connect(snd.ctx.destination);
         if (src.start) { src.start(0); } else if (src.noteOn) { src.noteOn(0); }
       }
-      if (snd.ctx.state && snd.ctx.state !== 'running' && snd.ctx.resume) { snd.ctx.resume(); }
+      wake(snd.ctx);
       return true;
     } catch (e) { return false; }
   };
@@ -947,6 +984,7 @@
   snd.play = function (name, delay) {
     var ctx = snd.ctx, seq = SOUNDS[name], t0, i, n;
     if (!snd.on || !ctx || !seq) { return false; }
+    wake(ctx);
     try {
       t0 = ctx.currentTime + 0.01 + (delay || 0);
       for (i = 0; i < seq.length; i++) { n = seq[i]; tone(ctx, NOTE[n[0]], t0 + n[1], n[2], n[3], n[4]); }
@@ -1310,6 +1348,27 @@
       for (name in SOUNDS) { if (!SOUNDS.hasOwnProperty(name)) { continue; } seq = SOUNDS[name]; for (i = 0; i < seq.length; i++) { n = seq[i]; if (!NOTE[n[0]] || !(n[1] >= 0) || !(n[2] > 0) || !(n[3] > 0 && n[3] <= 1) || !types[n[4]]) { bad++; } } }
       ok(bad === 0, 'T5 おとの ならび');
       snd.ctx = null; ok(snd.play('ok') === false, 'T5 おとの しくみが ない ときは ならさず とまらない'); snd.ctx = keep;
+    })();
+    /* K4 音の 起こしなおし＝止まった 音の しくみ（にせもの）で 鳴らすと resume が よばれる・動いて いれば よばない */
+    (function () {
+      var keep = snd.ctx, keepOn = snd.on, called = 0, fake, r1, r2, r3, c1, c2, wav;
+      function nop() {}
+      function node() { return { type: '', frequency: { setValueAtTime: nop }, gain: { setValueAtTime: nop, linearRampToValueAtTime: nop, exponentialRampToValueAtTime: nop }, connect: nop, start: nop, stop: nop }; }
+      fake = { state: 'suspended', currentTime: 0, destination: {}, createOscillator: node, createGain: node,
+        resume: function () { called++; fake.state = 'running'; } };
+      snd.on = true; snd.ctx = fake;
+      r1 = snd.play('tap'); c1 = called;
+      r2 = snd.play('tap'); c2 = called;
+      fake.state = 'interrupted'; r3 = snd.play('ok');
+      snd.ctx = keep; snd.on = keepOn;
+      ok(r1 === true && c1 === 1, 'K4 とまった しくみで ならすと resume が よばれる（よばれた ' + c1 + 'かい）');
+      ok(r2 === true && c2 === 1, 'K4 うごいて いる ときは resume を よばない（' + c2 + 'かい）');
+      ok(r3 === true && called === 2, 'K4 interrupted でも おこしなおす（' + called + 'かい）');
+      fake = { state: 'suspended', resume: function () { throw new Error('x'); } };
+      ok(wake(fake) === false, 'K4 resume が しっぱい しても とまらない');
+      wav = silentWav();
+      ok(wav.indexOf('data:audio/wav;base64,UklGR') === 0 && wav.length > 5000, 'K4 むおんの WAV が つくれる（' + wav.length + 'もじ）');
+      out.push('K4 ' + (c1 === 1 && c2 === 1 && called === 2 ? 'OK' : 'NG') + ' おとの しくみが とまって いたら ならす まえに resume（suspended→' + c1 + 'かい・running→ふえない・interrupted→' + called + 'かい）');
     })();
     CM.seed(null);
     out.unshift('PASS=' + pass + ' FAIL=' + fail);

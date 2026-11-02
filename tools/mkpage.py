@@ -11,7 +11,8 @@
 
 無音化のしくみ（index.html 本体には触らない）:
   アプリの音は必ず AudioContext（古い iPad では webkitAudioContext）を作るところを通る。
-  その入口を「使うと例外になる」形へ差し替える。アプリ側は try で囲んでいるので、
+  その入口を「使うと例外になる」形へ差し替える。音の ない audio（消音スイッチ対策・v8〜）と
+  よみあげ（speechSynthesis）も、Audio・HTMLMediaElement.play・speechSynthesis の入口で同じように塞ぐ。アプリ側は try で囲んでいるので、
   あそびは止まらず、音の しくみだけが作られない。
   あとで音を足しても、入口が同じなので自動的に無音になる。
 
@@ -52,6 +53,8 @@ window.__audioAsked = 0;
   try { window.webkitAudioContext = blocked; } catch (e) {}
   try { window.OfflineAudioContext = blocked; } catch (e) {}
   try { window.Audio = blocked; } catch (e) {}
+  /* audio 要素を 別の 道（createElement）で 作っても 再生の 入口で 塞ぐ（v8 の 消音スイッチ対策＝むおんの ループ も ここで 止まる） */
+  try { window.HTMLMediaElement.prototype.play = blocked; } catch (e) {}
   /* よみあげ（speechSynthesis）も 同じ入口で 塞ぐ＝こえも 音 */
   try { Object.defineProperty(window, 'speechSynthesis', { value: { speak: blocked, cancel: function () {} }, configurable: true }); } catch (e) {}
 })();
@@ -72,7 +75,8 @@ def check(text):
     if i < 0:
         return False
     first_app_script = text.find(u'<script', text.find(u'</script>', i))
-    return text.find(u'AudioContext = blocked', i) > i and (first_app_script < 0 or first_app_script > i)
+    return (text.find(u'AudioContext = blocked', i) > i and text.find(u'HTMLMediaElement.prototype.play = blocked', i) > i
+            and text.find(u"'speechSynthesis'", i) > i and (first_app_script < 0 or first_app_script > i))
 
 
 def main():

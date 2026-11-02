@@ -134,6 +134,17 @@
   .grown p{margin:4px 0;}
   #reset-2{background:var(--murasaki);}
 
+  /* 押した 手ごたえ（K26・おかえりクエスト と 同じ形）＝さわった しゅんかんに 少し ちぢみ、はなすと 行きすぎて もどる。
+     iPad の ウェブでは ふるえ（振動）が 使えないので、見た目の 変形と 音で さわった 感じを 作る。
+     press は ui.js が 子どもの ボタン・カードにだけ 付ける（てんせんの 紙・おとなのひと の 画面には 付けない） */
+  button,.choice{ -webkit-transition:-webkit-transform 0.22s cubic-bezier(0.34,1.56,0.64,1); transition:transform 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+  .press{ -webkit-transform:scale(0.92); transform:scale(0.92); -webkit-transition-duration:0.05s; transition-duration:0.05s; }
+
+  /* エラーの 帯（K30）＝ふだんは かくれている。うごかなかった ときだけ 画面の したに 出る（1がめんの 検査に えいきょう しない） */
+  .err-band{position:fixed; left:0; right:0; bottom:0; z-index:9999; background:var(--daidai-bg); color:var(--ink); border-top:4px solid var(--daidai); padding:8px 14px; text-align:left;}
+  .err-band .err-1{font-size:0.83rem; font-weight:bold;}
+  .err-band .err-2{font-size:0.5rem; color:var(--ink-soft); word-break:break-all; line-height:1.3;}
+
   /* iPad よこおき＝1がめんに おさめる（たて 640px 以内）。ひだり＝もんだい／みぎ＝えらぶ */
   @media (min-width:900px) and (orientation:landscape){
     .screen{max-width:1024px; padding:6px 14px 6px; overflow:hidden;}
@@ -256,7 +267,8 @@
     </label>
     <label>おと <select id="grown-snd"><option value="on">あり</option><option value="off">なし</option></select></label>
     <label>もんだいの よみあげ <select id="grown-voice"><option value="on">あり</option><option value="off">なし</option></select></label>
-    <p class="note">おとが 出ないときは、iPad の 音量と 消音（ミュート）を 確かめてください。</p>
+    <p class="note">おとが 出ないときは、iPad の 音量と 消音（ミュート）を 確かめてください（横の消音スイッチ・コントロールセンターのベルの印）。</p>
+    <p><button id="grown-snd-test" class="small">音のためし</button> <span id="grown-snd-res" class="note"></span></p>
     <p><button id="grown-save" class="small">ほぞんして もどる</button> <button id="grown-zukan-all" class="sub small">ずかんの絵を全部見る（親用）</button></p>
     <table id="grown-table"></table>
   </div><div class="grown-r">
@@ -279,6 +291,42 @@
   </div></div>
 </div>
 
+<!-- ===== エラーの帯（K30）＝思わぬ エラーで 白い 画面に しない。2行目は 生の エラー（実機の エラーを 見る ただ1つの 道） ===== -->
+<div id="err-band" class="err-band" style="display:none" data-n="0">
+  <div class="err-1">ごめんね。うまく うごかなかったよ（さわると きえるよ）</div>
+  <div id="err-2" class="err-2"></div>
+</div>
+<script>
+/* エラーの帯（K30）。アプリの 本体より 先に 置く＝本体の 読みこみで 止まっても 帯が 出る。全部を try で かこむ */
+(function (global) {
+  'use strict';
+  var doc = global.document;
+  global.onerror = function (msg, src, line, col) {
+    var band, raw, n, file;
+    try {
+      band = doc.getElementById('err-band'); raw = doc.getElementById('err-2');
+      if (!band || !raw) { return false; }
+      n = parseInt(band.getAttribute('data-n') || '0', 10) + 1;
+      band.setAttribute('data-n', String(n));
+      if (n === 1) {
+        file = String(src || '').split('?')[0].split('/').pop();
+        raw.textContent = String(msg) + '（' + (file || '-') + ' ' + line + (col ? ':' + col : '') + '）';
+      } else {
+        raw.setAttribute('data-more', String(n - 1));
+        if (raw.textContent.indexOf('（ほか') < 0) { raw.textContent += '（ほか あり）'; }
+      }
+      band.style.display = 'block';
+    } catch (e) { /* 帯が 出せなくても とめない */ }
+    return false;
+  };
+  try {
+    doc.addEventListener('click', function (ev) {
+      var t = ev.target, k = 0;
+      while (t && k < 4) { if (t.id === 'err-band') { t.style.display = 'none'; return; } t = t.parentNode; k++; }
+    }, false);
+  } catch (e2) { /* なくても すすむ */ }
+})(window);
+</script>
 <script>
 <!--APP_JS-->
 </script>

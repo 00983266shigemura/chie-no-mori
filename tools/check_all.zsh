@@ -21,7 +21,8 @@ print "== 3c/7 公開物の書かない語（受験校・日程・受験番号�
 /usr/bin/python3 "$ROOT/tools/check_private.py" "$ROOT/index.html" "$ROOT/README.md" "$ROOT/offline.appcache" || touch "$FAILFILE"
 print "== 4/7 ホーム画面の絵 =="
 /usr/bin/python3 "$ROOT/tools/make_icon.py" --check || touch "$FAILFILE"
-print "== 5/6 自己点検（ブラウザで実行） =="
+print "== 5/6 自己点検（ブラウザで実行・画面の部品 K26/K30 は無音の複製の中で） =="
+/usr/bin/python3 "$ROOT/tools/mkpage.py" || touch "$FAILFILE"
 TMP="$ROOT/logs/selftest_dom.html"
 "$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=20000 \
   --dump-dom "file://$ROOT/tools/test.html" > "$TMP" 2>/dev/null

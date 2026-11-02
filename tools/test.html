@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- format-ok CCが機械で読む自己点検の出力（しげ向け成果物ではない） -->
-<title>くるくる ずけい 自己点検</title>
+<title>ちえの もり 自己点検</title>
 <style>
   :root{color-scheme: light dark; --ground:#ffffff; --ink:#1b1b1b;}
   @media (prefers-color-scheme: dark){ :root{--ground:#14191f; --ink:#e8edf2;} }
@@ -17,6 +17,7 @@
   (function () {
     function blocked() { window.__audioAsked++; throw new Error('自己点検では音を出せません'); }
     window.AudioContext = blocked; window.webkitAudioContext = blocked; window.OfflineAudioContext = blocked; window.Audio = blocked;
+    try { window.HTMLMediaElement.prototype.play = blocked; } catch (e) {}
     try { Object.defineProperty(window, 'speechSynthesis', { value: { speak: blocked, cancel: function () {} }, configurable: true }); } catch (e) {}
   })();
   window.__loadErrors = [];
@@ -27,16 +28,53 @@
 <div id="out">（まだ）</div>
 <script src="../src/app.js" onerror="window.__loadErrors.push('ERR script load failed')"></script>
 <script>
+/* 1) 計算の 部分（src/app.js だけ）  2) 画面の 部品（K26 押した手ごたえ・K30 エラーの帯）＝無音の複製（logs/silent_index.html）の中で CM.ui.selfTest
+   2) が 終わるまでは FAIL を 出しておく（複製が 読めない・時間切れ＝不合格） */
 (function () {
-  var out = document.getElementById('out'), lines;
+  var out = document.getElementById('out'), lines = [], pass = 0, fail = 0, head;
+  function keysOf(arr) {
+    var seen = {}, keys = [], i, m;
+    for (i = 0; i < arr.length; i++) { m = /^(?:FAIL )?(K\d+) /.exec(arr[i]); if (m && !seen[m[1]]) { seen[m[1]] = true; keys.push(m[1]); } }
+    keys.sort(function (a, b) { return parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10); });
+    return keys;
+  }
+  function write(extra) {
+    var keys = keysOf(lines), need = ['K4', 'K26', 'K30'], miss = [], i, f = fail;
+    for (i = 0; i < need.length; i++) { if (keys.indexOf(need[i]) < 0) { miss.push(need[i]); } }
+    if (miss.length) { f++; }
+    out.textContent = ['PASS=' + pass + ' FAIL=' + f].concat(lines, miss.length ? ['FAIL Kの こうもくが たりない ' + miss.join(',')] : [], extra || [], ['KEYS=' + keys.join(',')], window.__loadErrors).join('\n');
+  }
   try {
     if (!window.CM) { throw new Error('CM が無い＝app.js が最後まで実行されていない'); }
     lines = window.CM.selfTest(document);
-    out.textContent = lines.concat(window.__loadErrors).join('\n');
+    head = /^PASS=(\d+) FAIL=(\d+)$/.exec(lines.shift());
+    pass = parseInt(head[1], 10); fail = parseInt(head[2], 10);
   } catch (e) {
     out.textContent = 'FAIL=exception ' + (e && e.message ? e.message : e) + '\n' + window.__loadErrors.join('\n') + '\n' + (e && e.stack ? e.stack : '');
+    document.title = 'DONE';
+    return;
   }
-  document.title = 'DONE';
+  fail++;
+  write(['FAIL がめんの ぶひん（無音の複製）が まだ おわっていない']);
+  fail--;
+  var f = document.createElement('iframe');
+  f.style.width = '1024px'; f.style.height = '640px'; f.style.border = '0';
+  f.onload = function () {
+    var w = f.contentWindow, r;
+    try {
+      if (!w.CM || !w.CM.ui || !w.CM.ui.selfTest) { throw new Error('複製に CM.ui.selfTest が無い'); }
+      if (!(w.__audioAsked >= 0) || typeof w.HTMLMediaElement.prototype.play !== 'function' || String(w.HTMLMediaElement.prototype.play).indexOf('__audioAsked') < 0) { throw new Error('複製の 無音化が 効いていない'); }
+      r = w.CM.ui.selfTest();
+      pass += r.pass; fail += r.fail; lines = lines.concat(r.lines);
+      if (w.CM.snd.ctx !== null || (w.CM.snd.keep && !w.CM.snd.keep.paused)) { fail++; lines.push('FAIL 複製で 音の しくみが 作られた'); }
+      write([]);
+    } catch (e2) {
+      fail++; write(['FAIL がめんの ぶひん 例外 ' + (e2 && e2.message ? e2.message : e2)]);
+    }
+    document.title = 'DONE';
+  };
+  f.src = '../logs/silent_index.html';
+  document.body.appendChild(f);
 })();
 </script>
 </body>

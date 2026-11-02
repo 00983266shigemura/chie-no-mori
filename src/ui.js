@@ -460,6 +460,51 @@
     ac.addEventListener('updateready', function () { try { ac.swapCache(); } catch (e) { /* つぎに */ } cacheReady = true; reloadIfIdle(); }, false);
   }
 
+  /* ================= 押した 手ごたえ（K26・おかえりクエスト と 同じ形） ================= */
+  /* さわった しゅんかんに press を 付けて 少し ちぢめ、はなすと 外して 行きすぎて もどる（CSS の .press）。
+     付けるのは 子どもが 押す ボタンと えらぶ カードだけ。てんせんの 紙（キャンバス）・おとなのひと の 長押し・
+     おとなのひと の 画面には 付けない。見た目だけを 変える＝押した ときの しょり（click）は いままで どおり 1回 */
+  function hasCls(n, c) { return !!(n && n.className && (' ' + n.className + ' ').indexOf(' ' + c + ' ') >= 0); }
+  function addCls(n, c) { if (!n || hasCls(n, c)) { return; } n.className = n.className ? n.className + ' ' + c : c; }
+  function delCls(n, c) { if (!hasCls(n, c)) { return; } n.className = (' ' + n.className + ' ').replace(' ' + c + ' ', ' ').replace(/^\s+|\s+$/g, ''); }
+  function inAdult(n) { var k = 0; while (n && k < 12) { if (n.id === 'scr-grown') { return true; } n = n.parentNode; k++; } return false; }
+  function pressTarget(n) {
+    var k = 0;
+    while (n && k < 5) {
+      if (n.tagName === 'BUTTON' || hasCls(n, 'choice')) {
+        if (n.id === 'grown-btn' || inAdult(n)) { return null; }
+        return n;
+      }
+      n = n.parentNode; k++;
+    }
+    return null;
+  }
+  var pressed = null;
+  function pressOn(ev) { var n = pressTarget(ev.target); if (pressed && pressed !== n) { delCls(pressed, 'press'); } pressed = n; if (n) { addCls(n, 'press'); } }
+  function pressOff() { if (pressed) { delCls(pressed, 'press'); pressed = null; } }
+  function bindPress() {
+    doc.addEventListener('touchstart', function (ev) { try { pressOn(ev); } catch (e) { /* 見た目だけ */ } }, false);
+    doc.addEventListener('touchend', function () { try { pressOff(); } catch (e) { /* 見た目だけ */ } }, false);
+    doc.addEventListener('touchcancel', function () { try { pressOff(); } catch (e) { /* 見た目だけ */ } }, false);
+    doc.addEventListener('click', function () { try { pressOff(); } catch (e) { /* 見た目だけ */ } }, true);
+    /* ふた本の ゆびの 拡大を とめる（iOS 10 は user-scalable=no が 効かない） */
+    doc.addEventListener('gesturestart', function (ev) { ev.preventDefault(); }, false);
+  }
+
+  /* ================= 音の ためし（おとなのひと） ================= */
+  function sndStatus() {
+    var c = CM.snd.ctx, k = CM.snd.keep;
+    return 'おと: ' + (c ? (c.state || 'ふめい') : 'なし') + '・むおんの ループ: ' + (k ? (k.paused ? 'とまっている' : 'あり') : 'なし');
+  }
+  function sndTest() {
+    var was = CM.snd.on, okd;
+    CM.snd.on = true; CM.snd.unlock();
+    okd = CM.snd.play('ok');
+    CM.snd.on = was;
+    setText(el('grown-snd-res'), (okd ? 'ならしました（' : 'おとの しくみが つくれません（') + sndStatus() + '）');
+    global.setTimeout(function () { setText(el('grown-snd-res'), (okd ? 'ならしました（' : 'おとの しくみが つくれません（') + sndStatus() + '）'); }, 500);
+  }
+
   /* ================= 押したときの 受けとり ================= */
   function init() {
     var gb = el('grown-btn'), tc = el('ten-canvas'), touched = false;
@@ -497,6 +542,7 @@
       S.perRound = parseInt(el('grown-per').value, 10) === 10 ? 10 : 5;
       S.sound = el('grown-snd').value !== 'off'; S.voice = el('grown-voice').value !== 'off';
       CM.snd.on = S.sound; CM.snd.voice = S.voice;
+      if (!S.sound && CM.snd.keep) { try { CM.snd.keep.pause(); } catch (e) { /* なくても */ } }
       CM.saveState(S); renderHome(); show('home');
     });
     on('reset-1', function () { el('reset-2').style.display = 'inline-block'; });
@@ -510,6 +556,9 @@
       if (screen === 'home') { renderHome(); }
     }, false);
     CM.snd.on = (S.sound !== false); CM.snd.voice = (S.voice !== false);
+    on('grown-snd-test', sndTest);
+    bindPress();
+    doc.addEventListener('visibilitychange', function () { if (doc.hidden && CM.snd.keep) { try { CM.snd.keep.pause(); } catch (e) { /* つぎの タッチで もどる */ } } }, false);
     doc.addEventListener('touchend', function () { CM.snd.unlock(); }, false);
     doc.addEventListener('click', function (ev) { CM.snd.unlock(); if (ev.target && ev.target.tagName === 'BUTTON') { CM.snd.play('tap'); } }, false);
     tidyUrl();
@@ -519,7 +568,62 @@
   }
   /* 試験用＝画面を 直接 うごかす 入口 */
   CM.ui = { startRound: startRound, tenTap: tenTap, tenCheck: tenCheck, state: function () { return S; }, round: function () { return G; }, ten: function () { return T; },
-    timer: function () { return TM; }, setTimer: function (on) { TM.on = !!on; if (!on) { stopTimer(); el('tbar').style.display = 'none'; } }, timeout: onTimeout, storyGo: storyGo };
+    timer: function () { return TM; }, setTimer: function (on) { TM.on = !!on; if (!on) { stopTimer(); el('tbar').style.display = 'none'; } }, timeout: onTimeout, storyGo: storyGo,
+    selfTest: uiSelfTest };
+
+  /* ================= 自己点検（画面の 部品・tools/test.html が 無音の複製の 中で よぶ） ================= */
+  function fire(n, type) { var ev = doc.createEvent('Event'); ev.initEvent(type, true, true); n.dispatchEvent(ev); }
+  function uiSelfTest() {
+    var pass = 0, fail = 0, lines = [], i, n, all, targets = [], skipped = [], bad = [], names = [], nBtn = 0, nCard = 0, scr0, idx0, dur, band, raw, t1, t2, shown0;
+    function ok(cond, label) { if (cond) { pass++; } else { fail++; lines.push('FAIL ' + label); } }
+    /* K26 押した 手ごたえ＝子どもが 押す ボタン ぜんぶ＋えらぶ カードに touchstart→press・touchend→はずれる */
+    TM.on = false; stopTimer();
+    renderHome(); show('home');
+    S.g.kagami.level = 1; startRound('kagami');
+    all = doc.getElementsByTagName('button');
+    for (i = 0; i < all.length; i++) { if (pressTarget(all[i]) === all[i]) { targets.push(all[i]); nBtn++; } else { skipped.push(all[i].id || all[i].className); } }
+    all = el('choices').getElementsByClassName('choice');
+    for (i = 0; i < all.length; i++) { if (pressTarget(all[i]) === all[i]) { targets.push(all[i]); nCard++; } }
+    scr0 = screen; idx0 = G.idx;
+    for (i = 0; i < targets.length; i++) {
+      n = targets[i];
+      fire(n, 'touchstart');
+      t1 = hasCls(n, 'press');
+      if (i === 0) { dur = String((global.getComputedStyle ? global.getComputedStyle(n, null) : n.style).transitionDuration || ''); }
+      fire(n, 'touchend');
+      t2 = hasCls(n, 'press');
+      if (!t1 || t2) { bad.push((n.id || n.className) + (t1 ? '' : ' つかない') + (t2 ? ' のこる' : '')); }
+      names.push(n.id || ('.' + String(n.className).split(' ')[0] + (n.getAttribute('data-g') ? ':' + n.getAttribute('data-g') : (n.getAttribute('data-i') !== null ? ':' + n.getAttribute('data-i') : ''))));
+    }
+    ok(targets.length >= 25 && nCard >= 2, 'K26 たいしょうの かず（ボタン ' + nBtn + '・カード ' + nCard + '）');
+    ok(bad.length === 0, 'K26 touchstart で press・touchend で はずれる（だめ ' + bad.length + '）' + bad.join(' '));
+    fire(targets[0], 'touchstart'); fire(targets[0], 'touchcancel');
+    ok(!hasCls(targets[0], 'press'), 'K26 touchcancel でも はずれる');
+    fire(targets[0], 'touchstart'); fire(el('q-text'), 'click');
+    ok(!hasCls(targets[0], 'press'), 'K26 click でも はずれる');
+    ok(dur.indexOf('0.05s') === 0, 'K26 おして 0.1びょう いないに かわる（transition ' + dur + '）');
+    ok(pressTarget(el('ten-canvas')) === null && pressTarget(el('grown-btn')) === null && pressTarget(el('grown-snd-test')) === null, 'K26 てんせんの かみ・おとなの ながおし・おとなのひと の がめん には つけない');
+    /* touch の ながれ だけでは しょりが はしらない（押した ときの しょりは click の 1回だけ） */
+    ok(screen === scr0 && G.idx === idx0 && !G.done, 'K26 touch だけでは しょりが はしらない（がめん ' + screen + '）');
+    lines.push('K26 ' + (bad.length === 0 ? 'OK' : 'NG') + ' おした てごたえ ' + targets.length + 'こ（ボタン ' + nBtn + '・カード ' + nCard + '）・つけない ' + skipped.length + 'こ（おとなのひと）');
+    lines.push('K26 たいしょう: ' + names.join(' '));
+    stopTimer(); renderHome(); show('home'); TM.on = true;
+    /* K30 エラーの 帯＝ふだんは かくれていて、window.onerror で 出て 文が 入る */
+    band = el('err-band'); raw = el('err-2');
+    shown0 = band ? band.style.display : 'なし';
+    ok(!!band && shown0 === 'none', 'K30 ふだんは かくれている（' + shown0 + '）');
+    if (band && typeof global.onerror === 'function') {
+      global.onerror('K30 わざと おこした エラー', 'http://x/index.html?v=8', 123, 45);
+      ok(band.style.display === 'block', 'K30 おびが でる');
+      ok(band.textContent.indexOf('ごめんね') >= 0, 'K30 1ぎょうめ ごめんね');
+      ok(raw.textContent.indexOf('K30 わざと おこした エラー') >= 0 && raw.textContent.indexOf('index.html 123:45') >= 0, 'K30 2ぎょうめ なまの エラー＋ぎょう ' + raw.textContent);
+      lines.push('K30 ' + (band.style.display === 'block' ? 'OK' : 'NG') + ' エラーの おび: ' + band.textContent.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''));
+      fire(band, 'click');
+      ok(band.style.display === 'none', 'K30 さわると きえる');
+      band.setAttribute('data-n', '0'); raw.textContent = '';
+    } else { ok(false, 'K30 window.onerror が ない'); }
+    return { pass: pass, fail: fail, lines: lines };
+  }
 
   if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', init, false); } else { init(); }
 })(window);
